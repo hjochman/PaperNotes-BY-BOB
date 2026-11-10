@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Symbolfarbe: deaktiviert grau, aktiv (ausgewählt) weiß auf Schwarz, sonst schwarz. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#FF8C8C8C" android:state_enabled="false" />
+    <item android:color="#FFFFFFFF" android:state_selected="true" />
+    <item android:color="#FF000000" />
+</selector>

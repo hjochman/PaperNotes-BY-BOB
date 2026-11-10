@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Seitenvorschau in der Seitenleiste: dünner Rand; aktuelle Seite (selected) mit dickem schwarzem Rand. Kein Ripple. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFFFF" />
+            <stroke android:width="4dp" android:color="#FF000000" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFD8D8D8" />
+            <stroke android:width="1dp" android:color="#FF555555" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFFFF" />
+            <stroke android:width="1dp" android:color="#FF777777" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+</selector>

@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Startseite: Kopfbereich (Zurück, Titel/Suchfeld, Symbole), Anzahl, Inhaltsbereich (Zeilen werden im Code je Bildschirmseite
+  aufgebaut, kein Scrollen) und Seitenwechselleiste. Ids sind die Schnittstelle zu MainActivity.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/headerBar"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@color/surface_gray"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="16dp">
+
+        <ImageButton
+            android:id="@+id/buttonBack"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/editor_back"
+            android:src="@drawable/ic_back"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/textTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:paddingStart="16dp"
+            android:paddingEnd="8dp"
+            android:textColor="@color/black"
+            android:textSize="28sp" />
+
+        <EditText
+            android:id="@+id/editSearch"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:autofillHints="@null"
+            android:background="@drawable/bg_input"
+            android:hint="@string/search_hint"
+            android:imeOptions="actionSearch"
+            android:importantForAutofill="no"
+            android:inputType="text"
+            android:maxLines="1"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:textColor="@color/black"
+            android:textColorHint="@color/text_secondary"
+            android:textSize="18sp"
+            android:visibility="gone" />
+
+        <!-- Nextcloud-Sync: Logo mit Status/Zahl der ausstehenden Änderungen; Tipp öffnet den Sync-Dialog. -->
+        <LinearLayout
+            android:id="@+id/syncGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_list_plain"
+            android:clickable="true"
+            android:contentDescription="@string/sync_icon_description"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minWidth="48dp"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
+
+            <ImageView
+                android:id="@+id/syncIcon"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_nextcloud"
+                android:tint="@color/icon_tint" />
+
+            <TextView
+                android:id="@+id/syncBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="4dp"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/buttonNew"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/menu_new"
+            android:src="@drawable/ic_add" />
+
+        <ImageButton
+            android:id="@+id/buttonSearch"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/search"
+            android:src="@drawable/ic_search" />
+
+        <ImageButton
+            android:id="@+id/buttonViewMode"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/view_list"
+            android:src="@drawable/ic_view_list" />
+
+        <ImageButton
+            android:id="@+id/buttonMore"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/menu_more"
+            android:src="@drawable/ic_more" />
+    </LinearLayout>
+
+    <!-- Auswahlmodus: ersetzt den Kopfbereich (Sichtbarkeit in MainActivity). Aktionen mit Symbol und Beschriftung. -->
+    <LinearLayout
+        android:id="@+id/selectionBar"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:background="@color/surface_gray"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:visibility="gone">
+
+        <ImageButton
+            android:id="@+id/buttonSelClose"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/selection_end"
+            android:src="@drawable/ic_close" />
+
+        <TextView
+            android:id="@+id/textSelCount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textColor="@color/black"
+            android:textSize="22sp" />
+
+        <TextView
+            android:id="@+id/actionShare"
+            style="@style/Widget.PaperNotes.SelectionAction"
+            android:drawableTop="@drawable/ic_share"
+            android:text="@string/action_share" />
+
+        <TextView
+            android:id="@+id/actionExport"
+            style="@style/Widget.PaperNotes.SelectionAction"
+            android:drawableTop="@drawable/ic_export"
+            android:text="@string/action_export" />
+
+        <TextView
+            android:id="@+id/actionMove"
+            style="@style/Widget.PaperNotes.SelectionAction"
+            android:drawableTop="@drawable/ic_move"
+            android:text="@string/action_move" />
+
+        <TextView
+            android:id="@+id/actionDelete"
+            style="@style/Widget.PaperNotes.SelectionAction"
+            android:drawableTop="@drawable/ic_trash"
+            android:text="@string/delete" />
+
+        <TextView
+            android:id="@+id/actionSelectAll"
+            style="@style/Widget.PaperNotes.SelectionAction"
+            android:drawableTop="@drawable/ic_select_all"
+            android:text="@string/select_all" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/textCount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface_gray"
+        android:minHeight="24dp"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="8dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/line_gray" />
+
+    <FrameLayout
+        android:id="@+id/contentArea"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/pageRows"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical" />
+
+        <TextView
+            android:id="@+id/textEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:padding="24dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="20sp"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/pagerBar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/surface_gray"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/buttonPrevPage"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_tool"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:duplicateParentState="true"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_arrow_up"
+                android:tint="@color/icon_tint" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:duplicateParentState="true"
+                android:paddingStart="8dp"
+                android:text="@string/page_prev"
+                android:textColor="@color/text_tint"
+                android:textSize="16sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/textPageNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="72dp"
+            android:gravity="center"
+            android:textColor="@color/black"
+            android:textSize="16sp" />
+
+        <LinearLayout
+            android:id="@+id/buttonNextPage"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_tool"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:duplicateParentState="true"
+                android:paddingEnd="8dp"
+                android:text="@string/page_next"
+                android:textColor="@color/text_tint"
+                android:textSize="16sp" />
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:duplicateParentState="true"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_arrow_down"
+                android:tint="@color/icon_tint" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

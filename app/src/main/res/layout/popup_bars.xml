@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Stift-/Radierer-Leiste als eigenes Fenster (PopupWindow) unter der Werkzeugzeile, wie in HiNote. Sie liegt über dem
+  Blatt, ohne die Schreibfläche zu verkleinern; Strichkoordinaten bleiben stabil. Ids sind die Schnittstelle zu EditorActivity.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/barRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_popup_bar">
+
+        <LinearLayout
+            android:id="@+id/penBar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/editor_subbar_height"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="56dp"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/buttonPenFountain"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/pen_fountain"
+                android:src="@drawable/ic_pen_fountain" />
+
+            <ImageButton
+                android:id="@+id/buttonPenBallpoint"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/pen_ballpoint"
+                android:src="@drawable/ic_pen_ballpoint" />
+
+            <ImageButton
+                android:id="@+id/buttonPenPencil"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/pen_pencil"
+                android:src="@drawable/ic_pen_pencil" />
+
+            <ImageButton
+                android:id="@+id/buttonPenMarker"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/pen_marker"
+                android:src="@drawable/ic_pen_marker" />
+
+            <View style="@style/Widget.PaperNotes.Divider" />
+
+            <ImageButton
+                android:id="@+id/buttonColorBlack"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:background="@drawable/bg_color_black"
+                android:contentDescription="@string/color_black"
+                android:tint="@null" />
+
+            <ImageButton
+                android:id="@+id/buttonColorGray"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:background="@drawable/bg_color_gray"
+                android:contentDescription="@string/color_gray"
+                android:tint="@null" />
+
+            <ImageButton
+                android:id="@+id/buttonColorWhite"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:background="@drawable/bg_color_white"
+                android:contentDescription="@string/color_white"
+                android:tint="@null" />
+
+            <View style="@style/Widget.PaperNotes.Divider" />
+
+            <ImageButton
+                android:id="@+id/buttonPenSmaller"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/size_smaller"
+                android:src="@drawable/ic_minus" />
+
+            <SeekBar
+                android:id="@+id/seekPenWidth"
+                style="@style/Widget.PaperNotes.Seek"
+                android:contentDescription="@string/size" />
+
+            <ImageButton
+                android:id="@+id/buttonPenLarger"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/size_larger"
+                android:src="@drawable/ic_add" />
+
+            <TextView
+                android:id="@+id/textPenWidth"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textColor="@color/black"
+                android:textSize="18sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/eraserBar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/editor_subbar_height"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="56dp"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/buttonEraserStandard"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/eraser_standard"
+                android:src="@drawable/ic_tool_eraser" />
+
+            <ImageButton
+                android:id="@+id/buttonEraserArea"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/eraser_area"
+                android:src="@drawable/ic_eraser_area" />
+
+            <ImageButton
+                android:id="@+id/buttonEraserStrokes"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/eraser_strokes"
+                android:src="@drawable/ic_eraser_strokes" />
+
+            <View style="@style/Widget.PaperNotes.Divider" />
+
+            <ImageButton
+                android:id="@+id/buttonEraserSmaller"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/size_smaller"
+                android:src="@drawable/ic_minus" />
+
+            <SeekBar
+                android:id="@+id/seekEraserSize"
+                style="@style/Widget.PaperNotes.Seek"
+                android:contentDescription="@string/size" />
+
+            <ImageButton
+                android:id="@+id/buttonEraserLarger"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/size_larger"
+                android:src="@drawable/ic_add" />
+
+            <TextView
+                android:id="@+id/textEraserSize"
+                android:layout_width="48dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:textColor="@color/black"
+                android:textSize="18sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/lassoBar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/editor_subbar_height"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="56dp"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/buttonLassoInk"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/tool_pen"
+                android:src="@drawable/ic_tool_pen" />
+
+            <ImageButton
+                android:id="@+id/buttonLassoText"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/tool_text"
+                android:src="@drawable/ic_tool_text" />
+
+            <ImageButton
+                android:id="@+id/buttonLassoImage"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/tool_image"
+                android:src="@drawable/ic_tool_image" />
+
+            <TextView
+                android:id="@+id/textLassoHint"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:paddingStart="12dp"
+                android:text="@string/lasso_hint"
+                android:textColor="@color/black"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Audioleiste in zwei Zeilen: oben Aufnahme/Wiedergabe (mit dem Pin), unten Verwaltung, hinten Spur x/y und Name. -->
+        <LinearLayout
+            android:id="@+id/audioBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/editor_subbar_height"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="56dp">
+
+                <ImageButton
+                    android:id="@+id/buttonAudioRecord"
+                    style="@style/Widget.PaperNotes.IconButton"
+                    android:contentDescription="@string/audio_record"
+                    android:src="@drawable/ic_tool_mic" />
+
+                <View style="@style/Widget.PaperNotes.Divider" />
+
+                <ImageButton
+                    android:id="@+id/buttonAudioBack"
+                    style="@style/Widget.PaperNotes.IconButton"
+                    android:contentDescription="@string/audio_skip_back"
+                    android:src="@drawable/ic_skip_back" />
+
+                <ImageButton
+                    android:id="@+id/buttonAudioPlay"
+                    style="@style/Widget.PaperNotes.IconButton"
+                    android:contentDescription="@string/audio_play"
+                    android:src="@drawable/ic_play" />
+
+                <ImageButton
+                    android:id="@+id/buttonAudioForward"
+                    style="@style/Widget.PaperNotes.IconButton"
+                    android:contentDescription="@string/audio_skip_forward"
+                    android:src="@drawable/ic_skip_forward" />
+
+                <SeekBar
+                    android:id="@+id/seekAudio"
+                    style="@style/Widget.PaperNotes.Seek"
+                    android:contentDescription="@string/audio_position" />
+
+                <TextView
+                    android:id="@+id/textAudioTime"
+                    android:layout_width="150dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textColor="@color/black"
+                    android:textSize="18sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/editor_subbar_height"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="16dp">
+
+                <ImageButton
+                    android:id="@+id/buttonAudioExport"
+                    style="@style/Widget.PaperNotes.IconButton"
+                    android:contentDescription="@string/audio_export"
+                    android:src="@drawable/ic_export" />
+
+                <ImageButton
+                    android:id="@+id/buttonAudioRename"
+                    style="@style/Widget.PaperNotes.IconButton"
+                    android:contentDescription="@string/action_rename"
+                    android:src="@drawable/ic_rename" />
+
+                <ImageButton
+                    android:id="@+id/buttonAudioDelete"
+                    style="@style/Widget.PaperNotes.IconButton"
+                    android:contentDescription="@string/delete"
+                    android:src="@drawable/ic_trash" />
+
+                <TextView
+                    android:id="@+id/buttonAudioTrack"
+                    android:layout_width="72dp"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bg_tool"
+                    android:clickable="true"
+                    android:contentDescription="@string/audio_track"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:textColor="@color/icon_tint"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/textAudioName"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:contentDescription="@string/action_rename"
+                    android:ellipsize="end"
+                    android:focusable="true"
+                    android:gravity="start|center_vertical"
+                    android:singleLine="true"
+                    android:textColor="@color/black"
+                    android:textSize="18sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/buttonPinBar"
+        style="@style/Widget.PaperNotes.IconButton"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
+        android:contentDescription="@string/pin_bar"
+        android:src="@drawable/ic_pin" />
+</FrameLayout>

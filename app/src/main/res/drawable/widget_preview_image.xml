@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Statische Vorschau für die Widget-Auswahl (Android bis 11; ab 12 zeigt widget_preview.xml): runder Rahmen mit Abstand, Kopfzeile, Textbalken statt Text. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="136dp"
+    android:viewportWidth="250"
+    android:viewportHeight="170">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M0,0 H250 V170 H0 Z" />
+    <path android:pathData="M17,5 H233 A12,12 0 0 1 245,17 V153 A12,12 0 0 1 233,165 H17 A12,12 0 0 1 5,153 V17 A12,12 0 0 1 17,5 Z" android:strokeColor="#FF000000" android:strokeWidth="2" />
+    <path android:pathData="M12,19 H44" android:strokeColor="#FF000000" android:strokeWidth="7" />
+    <path android:pathData="M60,19 H120" android:strokeColor="#FF000000" android:strokeWidth="5" />
+    <path android:pathData="M212,9 V29 M202,19 H222" android:strokeColor="#FF000000" android:strokeWidth="2" />
+    <path android:pathData="M5,38 H245" android:strokeColor="#FF000000" android:strokeWidth="1" />
+    <path android:pathData="M12,62 H130 M12,100 H110 M12,138 H150" android:strokeColor="#FF000000" android:strokeWidth="4" />
+    <path android:pathData="M200,62 H238 M200,100 H238 M200,138 H238" android:strokeColor="#FF444444" android:strokeWidth="3" />
+    <path android:pathData="M5,76 H245 M5,114 H245" android:strokeColor="#FFB0B0B0" android:strokeWidth="1" />
+</vector>

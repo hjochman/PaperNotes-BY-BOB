@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wie bg_list_plain, aber für die unterste Fläche im Widget: gedrückt mit unteren Ecken im Innenradius des Rahmens. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFE6E6E6" />
+            <corners
+                android:bottomLeftRadius="@dimen/widget_corner_inner"
+                android:bottomRightRadius="@dimen/widget_corner_inner" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#00000000" />
+        </shape>
+    </item>
+</selector>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Selbst gezeichnetes Auswahlkästchen, angehakt: schwarzes Quadrat mit weißem Haken (Auswahlmodus der Startseite). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp"
+    android:height="28dp"
+    android:viewportWidth="28"
+    android:viewportHeight="28">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M4,2 H24 A2,2 0 0 1 26,4 V24 A2,2 0 0 1 24,26 H4 A2,2 0 0 1 2,24 V4 A2,2 0 0 1 4,2 Z" />
+    <path
+        android:pathData="M7.5,14.5 L12,19 L20.5,9.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

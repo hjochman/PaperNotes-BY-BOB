@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Selbst gezeichnetes Symbol: 24dp, 2dp-Strich, schwarz (Farbe kommt zur Laufzeit aus @color/icon_tint). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4,5 H20 V19 H4 Z M4,16 L9,11 L13,15 L16,12 L20,16 M14,9 A1.5,1.5 0 1 0 17,9 A1.5,1.5 0 1 0 14,9"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

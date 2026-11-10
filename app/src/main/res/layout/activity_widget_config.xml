@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget-Einstellungen: Kopfzeile wie in den Einstellungen, darunter große Zeilen (mindestens 72dp); Tipp wechselt Ja/Nein
+  oder öffnet einen Auswahldialog. Unten "Fertig". Ids sind die Schnittstelle zu NotesWidgetConfigActivity.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@color/surface_gray"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="16dp">
+
+        <ImageButton
+            android:id="@+id/buttonBack"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/cancel"
+            android:src="@drawable/ic_back" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:paddingStart="16dp"
+            android:paddingEnd="8dp"
+            android:text="@string/widget_config_title"
+            android:textColor="@color/black"
+            android:textSize="28sp" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/line_gray" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/rowClock"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/widget_config_clock" />
+
+        <TextView
+            android:id="@+id/rowClockValue"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowDate"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/widget_config_date" />
+
+        <TextView
+            android:id="@+id/rowDateValue"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowSource"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/widget_config_source" />
+
+        <TextView
+            android:id="@+id/rowSourceValue"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowFolder"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/widget_config_folder" />
+
+        <TextView
+            android:id="@+id/rowFolderValue"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowCount"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/widget_config_count" />
+
+        <TextView
+            android:id="@+id/rowCountValue"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowFavoritesFirst"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/widget_config_favorites_first" />
+
+        <TextView
+            android:id="@+id/rowFavoritesFirstValue"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsValue"
+            android:paddingTop="4dp"
+            android:text="@string/widget_config_favorites_first_hint"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowNewButton"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/widget_config_new_button" />
+
+        <TextView
+            android:id="@+id/rowNewButtonValue"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowTitle"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/widget_config_title_row" />
+
+        <TextView
+            android:id="@+id/rowTitleValue"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowSync"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/sync_widget_option" />
+
+        <TextView
+            android:id="@+id/rowSyncValue"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsValue"
+            android:paddingTop="4dp"
+            android:text="@string/sync_widget_option_hint"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowBattery"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/widget_config_battery" />
+
+        <TextView
+            android:id="@+id/rowBatteryValue"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowNotifications"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/widget_config_notifications" />
+
+        <TextView
+            android:id="@+id/rowNotificationsValue"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+
+        <TextView
+            android:id="@+id/rowNotificationsHint"
+            style="@style/Widget.PaperNotes.SettingsValue"
+            android:paddingTop="4dp"
+            android:text="@string/widget_config_notifications_hint"
+            android:textSize="14sp" />
+    </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/black" />
+
+    <TextView
+        android:id="@+id/buttonDone"
+        style="@style/Widget.PaperNotes.DialogButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_weight="0"
+        android:text="@string/widget_config_done" />
+</LinearLayout>

@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Seitenleiste des Editors (Dialogfenster rechts über dem Blatt): Reiter Seiten/Lesezeichen, Sprungfeld, Vorschauliste (im Code
+  gefüllt, Blättern per Pfeil statt Scrollen), Neue Seite. Ids sind die Schnittstelle zu PageSidebar.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingStart="2dp"
+    android:paddingEnd="0dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tabPages"
+            style="@style/Widget.PaperNotes.SidebarTab"
+            android:text="@string/sidebar_tab_pages" />
+
+        <TextView
+            android:id="@+id/tabBookmarks"
+            style="@style/Widget.PaperNotes.SidebarTab"
+            android:text="@string/sidebar_tab_bookmarks" />
+
+        <ImageButton
+            android:id="@+id/sidebarClose"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/sidebar_close"
+            android:src="@drawable/ic_close" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/black" />
+
+    <LinearLayout
+        android:id="@+id/jumpRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <!-- Hinweistext (mit Seitenzahl) wird im Code gesetzt. -->
+        <EditText
+            android:id="@+id/jumpInput"
+            tools:ignore="LabelFor"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_input"
+            android:imeOptions="actionGo"
+            android:importantForAutofill="no"
+            android:inputType="number"
+            android:maxLength="9"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:singleLine="true"
+            android:textColor="@color/black"
+            android:textColorHint="@color/text_secondary"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/jumpGo"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_button_outline"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:minWidth="64dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:singleLine="true"
+            android:text="@string/sidebar_jump_go"
+            android:textColor="@color/black"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/sidebarList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/line_gray" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/sidebarPrev"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/sidebar_list_prev"
+            android:src="@drawable/ic_chevron_left" />
+
+        <TextView
+            android:id="@+id/sidebarPageLabel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textColor="@color/black"
+            android:textSize="16sp" />
+
+        <ImageButton
+            android:id="@+id/sidebarNext"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/sidebar_list_next"
+            android:src="@drawable/ic_chevron_right" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/sidebarNewPage"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_margin="8dp"
+        android:background="@drawable/bg_button_outline"
+        android:clickable="true"
+        android:drawablePadding="8dp"
+        android:drawableStart="@drawable/ic_tool_page_add"
+        android:drawableTint="@color/icon_tint"
+        android:focusable="true"
+        android:gravity="center"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:text="@string/sidebar_new_page"
+        android:textColor="@color/black"
+        android:textSize="16sp" />
+</LinearLayout>

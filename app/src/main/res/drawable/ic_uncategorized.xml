@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Symbol für Kategorie "Nicht kategorisiert": Buch/Lesezeichen, 24dp, 2dp-Strich. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M6,4 C6,3 7,3 8,3 H16 C17,3 18,3 18,4 V20 C18,21 17,21 16,21 H8 C7,21 6,21 6,20 Z M10,3 V9 L12,7.5 L14,9 V3"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

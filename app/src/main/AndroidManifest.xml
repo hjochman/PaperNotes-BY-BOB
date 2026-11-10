@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Notizen liegen in Documents/PaperNotes (Android 10, targetSdk 29, Legacy-Speicherzugriff). -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <!-- Tonaufnahmen im Editor (Mikrofon-Werkzeug); wird erst beim Start einer Aufnahme abgefragt. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Nextcloud-Sync (nur HTTPS, siehe network_security_config): Verbindung herstellen, Netzart prüfen, Jobs nach Neustart wieder einplanen. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application
+        android:allowBackup="false"
+        android:requestLegacyExternalStorage="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.PaperNotes"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:supportsRtl="true">
+
+        <meta-data
+            android:name="hw_eink.app.refresh.mode"
+            android:value="3" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Teilen von Notizdateien: nur cacheDir/share, nur mit temporärer Leseberechtigung. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".backup.BackupsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".trash.TrashActivity"
+            android:exported="false" />
+
+        <!-- Vom System gestartete Sync-Läufe (JobScheduler); nur das System darf binden. -->
+        <service
+            android:name=".sync.SyncJobService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <activity
+            android:name=".sync.SyncSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".about.AboutActivity"
+            android:exported="false" />
+
+        <!-- Android-Widget "Notizen" für den Launcher: Provider-Receiver und Konfigurationsseite sind die einzigen exportierten Teile. -->
+        <receiver
+            android:name=".widget.NotesWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/notes_widget_info" />
+        </receiver>
+
+        <!-- 15-Minuten-Timer der Akku-/Benachrichtigungsanzeige (AlarmManager, inexakt); nur intern erreichbar. -->
+        <receiver
+            android:name=".widget.StatusReceiver"
+            android:exported="false" />
+
+        <!-- "Netzteil angesteckt" für die Ladeanzeige (JobScheduler, requiresCharging); nur das System darf binden. -->
+        <service
+            android:name=".widget.ChargeStatusJobService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <!--
+          Zählt nur die Anzahl sichtbarer Benachrichtigungen (kein Inhalt). exported=true verlangt das Framework; gebunden
+          werden darf nur das System (BIND_NOTIFICATION_LISTENER_SERVICE). Aktiv erst nach Zustimmung des Nutzers in den
+          Einstellungen (Benachrichtigungszugriff).
+        -->
+        <service
+            android:name=".widget.NotificationCountService"
+            android:exported="true"
+            android:label="@string/widget_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- Muss vom Widget-Host gestartet werden können (exportiert); prüft die appWidgetId selbst. -->
+        <activity
+            android:name=".widget.NotesWidgetConfigActivity"
+            android:exported="true"
+            android:label="@string/widget_config_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <!-- "+" im Widget: legt eine Notiz an und öffnet den Editor; nur per PendingIntent der App erreichbar. -->
+        <activity
+            android:name=".widget.NewNoteActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@style/Theme.PaperNotes.Transparent" />
+
+        <activity
+            android:name=".editor.EditorActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:theme="@style/Theme.PaperNotes.Editor"
+            android:windowSoftInputMode="adjustResize" />
+    </application>
+
+</manifest>

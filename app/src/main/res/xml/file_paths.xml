@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nur diese Unterordner des App-Cache werden per FileProvider freigegeben: "export" (PDF- und Audio-Export zum Teilen). -->
+<paths>
+    <cache-path name="export" path="export/" />
+</paths>

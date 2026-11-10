@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>papernotes</id>
+	<name>PaperNotes</name>
+	<summary>Viewer and PDF export for PaperNotes (.pnote) notebook files</summary>
+	<description><![CDATA[PaperNotes integration for Nextcloud.
+- Open and read .pnote notebook files directly in the browser
+- Faithful rendering of all 21 background templates (lines, grids, plans, meeting notes, cornell notes)
+- Crisp vector stroke rendering and full page navigation
+- Text boxes (rich text) and images in viewer and PDF, recordings as player below the page
+- High-quality vector PDF download, optionally with the recordings attached to the pages
+- Robust security with strict size limits and path traversal protection]]></description>
+	<version>1.0.0</version>
+	<licence>gpl</licence>
+	<author>hjochman</author>
+	<namespace>PaperNotes</namespace>
+	<category>office</category>
+	<category>files</category>
+	<website>https://github.com/hjochman/PaperNotes-BY-BOB</website>
+	<bugs>https://github.com/hjochman/PaperNotes-BY-BOB/issues</bugs>
+	<repository type="git">https://github.com/hjochman/PaperNotes-BY-BOB.git</repository>
+	<dependencies>
+		<nextcloud min-version="27" max-version="36" />
+	</dependencies>
+</info>

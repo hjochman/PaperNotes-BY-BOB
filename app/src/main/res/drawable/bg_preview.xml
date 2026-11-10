@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vorschaurahmen einer Notizkachel: weiß, dünner grauer Rand; gedrückt hellgrau. Kein Ripple, kein Schatten. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFD8D8D8" />
+            <stroke android:width="1dp" android:color="#FF555555" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFFFF" />
+            <stroke android:width="1dp" android:color="#FF777777" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+</selector>

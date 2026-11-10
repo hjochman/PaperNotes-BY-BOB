@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Kein Klartext-Verkehr (Nextcloud-Sync nutzt nur HTTPS). Nur die Zertifikate des Systems gelten; es gibt keine
+  Ausnahmen für einzelne Server und keine benutzerinstallierten Zertifizierungsstellen.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

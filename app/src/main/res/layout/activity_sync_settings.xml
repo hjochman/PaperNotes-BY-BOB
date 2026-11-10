@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nextcloud-Sync: Konto, Server, Zielordner, Optionen, Status. Kopfzeile wie die Einstellungen; der Inhalt scrollt,
+  weil die Seite länger als der Bildschirm sein kann. Ids sind die Schnittstelle zu SyncSettingsActivity.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@color/surface_gray"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="16dp">
+
+        <ImageButton
+            android:id="@+id/buttonBack"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/editor_back"
+            android:src="@drawable/ic_back" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:paddingStart="16dp"
+            android:paddingEnd="8dp"
+            android:text="@string/sync_title"
+            android:textColor="@color/black"
+            android:textSize="28sp" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/line_gray" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Status: nur Anzeige. -->
+            <LinearLayout
+                style="@style/Widget.PaperNotes.SettingsRow"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textStatus"
+                    style="@style/Widget.PaperNotes.SettingsLabel" />
+
+                <TextView
+                    android:id="@+id/textStatusDetail"
+                    style="@style/Widget.PaperNotes.SettingsValue" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowAccount"
+                style="@style/Widget.PaperNotes.SettingsRow"
+                android:background="@drawable/bg_list_row"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/rowAccountLabel"
+                        style="@style/Widget.PaperNotes.SettingsLabel"
+                        android:text="@string/sync_account" />
+
+                    <TextView
+                        android:id="@+id/textAccount"
+                        style="@style/Widget.PaperNotes.SettingsValue" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="@color/icon_tint" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowServer"
+                style="@style/Widget.PaperNotes.SettingsRow"
+                android:background="@drawable/bg_list_row"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/rowServerLabel"
+                        style="@style/Widget.PaperNotes.SettingsLabel"
+                        android:text="@string/sync_server" />
+
+                    <TextView
+                        android:id="@+id/textServer"
+                        style="@style/Widget.PaperNotes.SettingsValue" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="@color/icon_tint" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowTarget"
+                style="@style/Widget.PaperNotes.SettingsRow"
+                android:background="@drawable/bg_list_row"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/rowTargetLabel"
+                        style="@style/Widget.PaperNotes.SettingsLabel"
+                        android:text="@string/sync_target" />
+
+                    <TextView
+                        android:id="@+id/textTarget"
+                        style="@style/Widget.PaperNotes.SettingsValue" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="@color/icon_tint" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowEnabled"
+                style="@style/Widget.PaperNotes.SettingsRow"
+                android:background="@drawable/bg_list_row"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/rowEnabledLabel"
+                        style="@style/Widget.PaperNotes.SettingsLabel"
+                        android:text="@string/sync_enabled" />
+
+                    <TextView
+                        android:id="@+id/textEnabled"
+                        style="@style/Widget.PaperNotes.SettingsValue" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowWifi"
+                style="@style/Widget.PaperNotes.SettingsRow"
+                android:background="@drawable/bg_list_row"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/rowWifiLabel"
+                        style="@style/Widget.PaperNotes.SettingsLabel"
+                        android:text="@string/sync_wifi_only" />
+
+                    <TextView
+                        android:id="@+id/textWifi"
+                        style="@style/Widget.PaperNotes.SettingsValue" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/textWifiHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="24dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="24dp"
+                android:paddingBottom="12dp"
+                android:text="@string/sync_wifi_only_hint"
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp" />
+
+            <LinearLayout
+                android:id="@+id/rowFull"
+                style="@style/Widget.PaperNotes.SettingsRow"
+                android:background="@drawable/bg_list_row"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/rowFullLabel"
+                        style="@style/Widget.PaperNotes.SettingsLabel"
+                        android:text="@string/sync_full" />
+
+                    <TextView
+                        android:id="@+id/textFullHint"
+                        style="@style/Widget.PaperNotes.SettingsValue" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="@color/icon_tint" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowBattery"
+                style="@style/Widget.PaperNotes.SettingsRow"
+                android:background="@drawable/bg_list_row"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/rowBatteryLabel"
+                        style="@style/Widget.PaperNotes.SettingsLabel"
+                        android:text="@string/sync_battery_hint" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="@color/icon_tint" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/textBatteryHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="24dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="24dp"
+                android:paddingBottom="12dp"
+                android:text="@string/sync_battery_hint_text"
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="24dp"
+                android:paddingTop="16dp"
+                android:paddingEnd="24dp"
+                android:paddingBottom="4dp"
+                android:text="@string/sync_legend_title"
+                android:textColor="@color/black"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/legendContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/textOneWay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="24dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="24dp"
+                android:paddingBottom="12dp"
+                android:text="@string/sync_one_way"
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp" />
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

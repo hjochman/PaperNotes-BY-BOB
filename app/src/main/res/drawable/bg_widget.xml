@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget-Hintergrund: weiß mit schwarzem 2dp-Rahmen und abgerundeten Ecken (@dimen/widget_corner), kein Schatten.
+  Der Abstand zum Rand des Widget-Bereichs (@dimen/widget_inset) kommt vom Padding des Wurzel-Layouts; dort bleibt es transparent.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#FFFFFFFF" />
+    <stroke android:width="2dp" android:color="#FF000000" />
+    <corners android:radius="@dimen/widget_corner" />
+</shape>

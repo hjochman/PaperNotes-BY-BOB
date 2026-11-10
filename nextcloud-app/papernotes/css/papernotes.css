@@ -1,0 +1,399 @@
+/**
+ * PaperNotes Web Viewer & UI Styles
+ */
+
+/* File list styling */
+.files-list__row[data-cy-files-list-row-name$=".pnote"] .files-list__row-name-,
+tr[data-file$=".pnote"] .nametext .innernametext {
+    font-weight: 500;
+}
+
+#papernotes-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100000;
+    background-color: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    font-family: var(--default-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif);
+    color: #f1f5f9;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Loading & Error States */
+.papernotes-modal-loading,
+.papernotes-modal-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.papernotes-loading-box,
+.papernotes-error-box {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 32px 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+.papernotes-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--color-primary, #0082c9);
+    border-radius: 50%;
+    animation: pn-spin 0.8s linear infinite;
+}
+
+@keyframes pn-spin {
+    to { transform: rotate(360deg); }
+}
+
+.papernotes-loading-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: #cbd5e1;
+}
+
+.papernotes-error-icon {
+    font-size: 36px;
+}
+
+.papernotes-error-message {
+    font-size: 15px;
+    color: #f87171;
+    max-width: 400px;
+    text-align: center;
+}
+
+/* Header */
+.papernotes-header {
+    height: 56px;
+    background: #0f172a;
+    border-bottom: 1px solid #334155;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+}
+
+.papernotes-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 220px;
+}
+
+.papernotes-logo-icon {
+    width: 28px;
+    height: 28px;
+    background-image: url('../img/app.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.papernotes-title-box {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.papernotes-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #f8fafc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 320px;
+}
+
+.papernotes-folder {
+    font-size: 12px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.papernotes-header-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 2px 6px;
+}
+
+.papernotes-page-indicator {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 0 8px;
+    color: #e2e8f0;
+    min-width: 100px;
+    text-align: center;
+}
+
+.papernotes-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.papernotes-zoom-text {
+    font-size: 13px;
+    color: #cbd5e1;
+    min-width: 48px;
+    text-align: center;
+}
+
+/* Buttons */
+.papernotes-btn,
+.papernotes-btn-icon {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 6px 10px;
+}
+
+.papernotes-btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    font-size: 14px;
+}
+
+.papernotes-btn:hover,
+.papernotes-btn-icon:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+.papernotes-btn:disabled,
+.papernotes-btn-icon:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: transparent;
+}
+
+.papernotes-btn-primary {
+    background: var(--color-primary, #0082c9);
+    color: #ffffff;
+}
+
+.papernotes-btn-primary:hover {
+    filter: brightness(1.1);
+}
+
+.papernotes-btn-pdf {
+    background: #0284c7;
+    color: #ffffff;
+    gap: 6px;
+    padding: 6px 12px;
+}
+
+.papernotes-btn-pdf:hover {
+    background: #0369a1;
+}
+
+.papernotes-btn-close {
+    font-size: 18px;
+    margin-left: 8px;
+}
+
+.papernotes-btn-close:hover {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+/* Body & Viewport */
+.papernotes-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+.papernotes-sidebar {
+    width: 180px;
+    background: #0f172a;
+    border-right: 1px solid #334155;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.papernotes-sidebar-header {
+    height: 40px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    border-bottom: 1px solid #1e293b;
+}
+
+.papernotes-thumbnails {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.papernotes-thumb-card {
+    background: #1e293b;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    padding: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.papernotes-thumb-card:hover {
+    border-color: #475569;
+    transform: translateY(-1px);
+}
+
+.papernotes-thumb-card.active {
+    border-color: var(--color-primary, #0284c7);
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.4);
+}
+
+.papernotes-thumb-card canvas {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    background: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.papernotes-thumb-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+
+.papernotes-thumb-card.active .papernotes-thumb-label {
+    color: #38bdf8;
+    font-weight: 600;
+}
+
+.papernotes-viewport {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    cursor: grab;
+}
+
+.papernotes-viewport:active {
+    cursor: grabbing;
+}
+
+.papernotes-canvas-container {
+    display: inline-block;
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    line-height: 0;
+    transition: width 0.1s ease, height 0.1s ease;
+}
+
+#pn-canvas {
+    display: block;
+    border-radius: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .papernotes-sidebar {
+        display: none;
+    }
+    .papernotes-title-box {
+        max-width: 150px;
+    }
+    .papernotes-btn-pdf span {
+        display: none;
+    }
+}
+
+/* Recordings of the current page (B1): own row below the page, not part of the page */
+.papernotes-main {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+}
+
+.papernotes-main .papernotes-viewport {
+	min-height: 0;
+}
+
+.papernotes-audio-panel {
+	flex: 0 0 auto;
+	max-height: 40%;
+	overflow-y: auto;
+	padding: 8px 16px;
+	background: #0f172a;
+	border-top: 1px solid #334155;
+	color: #e2e8f0;
+}
+
+.papernotes-audio-panel[hidden] {
+	display: none;
+}
+
+.papernotes-audio-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 4px 0;
+}
+
+.papernotes-audio-name {
+	flex: 0 1 260px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.papernotes-audio-row audio {
+	flex: 1 1 auto;
+	min-width: 0;
+	height: 32px;
+}

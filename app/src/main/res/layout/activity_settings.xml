@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Einstellungen: Kopfzeile mit Zurück-Pfeil (wie Startseite), darunter Zeilen mit festen großen Touch-Zielen (mindestens 72dp).
+  Kein Scrollen: der Inhalt ist kurz. Ids sind die Schnittstelle zu SettingsActivity.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@color/surface_gray"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="16dp">
+
+        <ImageButton
+            android:id="@+id/buttonBack"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/editor_back"
+            android:src="@drawable/ic_back" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:paddingStart="16dp"
+            android:paddingEnd="8dp"
+            android:text="@string/settings_title"
+            android:textColor="@color/black"
+            android:textSize="28sp" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/line_gray" />
+
+    <!-- Speicherort: nur Anzeige. -->
+    <LinearLayout
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/settings_location" />
+
+        <TextView
+            android:id="@+id/textLocation"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+    </LinearLayout>
+
+    <!-- Nextcloud-Sync: öffnet dessen Einstellungen; zeigt den Status. -->
+    <LinearLayout
+        android:id="@+id/rowSync"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.PaperNotes.SettingsLabel"
+                android:text="@string/sync_row_title" />
+
+            <TextView
+                android:id="@+id/textSyncSummary"
+                style="@style/Widget.PaperNotes.SettingsValue" />
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_chevron_right"
+            android:tint="@color/icon_tint" />
+    </LinearLayout>
+
+    <!-- Abschnitt Sicherung. -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface_gray"
+        android:paddingStart="24dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="10dp"
+        android:text="@string/settings_backup_section"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <!-- Automatische Sicherung (Intervall auswählen). -->
+    <LinearLayout
+        android:id="@+id/rowBackupInterval"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.PaperNotes.SettingsLabel"
+                android:text="@string/settings_backup_interval" />
+
+            <TextView
+                android:id="@+id/textBackupInterval"
+                style="@style/Widget.PaperNotes.SettingsValue" />
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_chevron_right"
+            android:tint="@color/icon_tint" />
+    </LinearLayout>
+
+    <!-- Sicherungen ansehen. -->
+    <LinearLayout
+        android:id="@+id/rowBackups"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.PaperNotes.SettingsLabel"
+                android:text="@string/settings_backups" />
+
+            <TextView
+                android:id="@+id/textBackupsSummary"
+                style="@style/Widget.PaperNotes.SettingsValue" />
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_chevron_right"
+            android:tint="@color/icon_tint" />
+    </LinearLayout>
+
+    <!-- Alle Sicherungen löschen. -->
+    <LinearLayout
+        android:id="@+id/rowDeleteBackups"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="horizontal">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:duplicateParentState="true"
+            android:text="@string/backup_delete_all_action" />
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:duplicateParentState="true"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_trash"
+            android:tint="@color/icon_tint" />
+    </LinearLayout>
+
+    <!-- Papierkorb ansehen. -->
+    <LinearLayout
+        android:id="@+id/rowTrash"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.PaperNotes.SettingsLabel"
+                android:text="@string/settings_trash" />
+
+            <TextView
+                android:id="@+id/textTrashCount"
+                style="@style/Widget.PaperNotes.SettingsValue" />
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_chevron_right"
+            android:tint="@color/icon_tint" />
+    </LinearLayout>
+
+    <!-- Papierkorb leeren: ausgegraut, wenn der Papierkorb leer ist. -->
+    <LinearLayout
+        android:id="@+id/rowEmptyTrash"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="horizontal">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:duplicateParentState="true"
+            android:text="@string/trash_empty_action" />
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:duplicateParentState="true"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_trash"
+            android:tint="@color/icon_tint" />
+    </LinearLayout>
+
+    <!-- Version. -->
+    <LinearLayout
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:text="@string/settings_version" />
+
+        <TextView
+            android:id="@+id/textVersion"
+            style="@style/Widget.PaperNotes.SettingsValue" />
+    </LinearLayout>
+
+    <!-- Info/Über: öffnet die Über-Seite. -->
+    <LinearLayout
+        android:id="@+id/rowAbout"
+        style="@style/Widget.PaperNotes.SettingsRow"
+        android:background="@drawable/bg_list_row"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="horizontal">
+
+        <TextView
+            style="@style/Widget.PaperNotes.SettingsLabel"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:text="@string/settings_about" />
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_chevron_right"
+            android:tint="@color/icon_tint" />
+    </LinearLayout>
+</LinearLayout>

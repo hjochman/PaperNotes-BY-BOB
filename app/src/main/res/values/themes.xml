@@ -1,0 +1,153 @@
+<resources>
+    <style name="Theme.PaperNotes" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/white</item>
+        <item name="android:colorBackground">@color/white</item>
+        <item name="android:textColorPrimary">@color/black</item>
+        <!-- Startseite: Statusleiste sichtbar, weiß mit dunklen Symbolen; keine Fensteranimation (E-Ink). -->
+        <item name="android:statusBarColor">@color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <!-- E-Ink: Editor ohne Fensteranimationen. -->
+    <style name="Theme.PaperNotes.Editor">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowContentTransitions">false</item>
+        <!-- Statuszeile aus wie in HiNote: mehr Blatt. -->
+        <item name="android:windowFullscreen">true</item>
+    </style>
+
+    <!-- Durchsichtige Activity ohne Oberfläche (Widget-Knopf "+"): kein Fenster, keine Animation. -->
+    <style name="Theme.PaperNotes.Transparent" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
+    <!-- Vorlagendialog: schwebendes Fenster ohne Animation, Abdunkelung und Schatten (E-Ink). -->
+    <style name="Theme.PaperNotes.TemplateDialog" parent="android:Theme.Material.Light.Dialog.NoActionBar">
+        <item name="android:windowBackground">@drawable/bg_dialog</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowElevation">0dp</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowContentTransitions">false</item>
+    </style>
+
+    <!-- Seitenleiste des Editors: Fenster rechts über dem Blatt, ohne Animation, Abdunkelung und Schatten (E-Ink). -->
+    <style name="Theme.PaperNotes.Sidebar" parent="android:Theme.Material.Light.Dialog.NoActionBar">
+        <item name="android:windowBackground">@drawable/bg_sidebar</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowElevation">0dp</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowContentTransitions">false</item>
+    </style>
+
+    <!-- Reiter der Seitenleiste: aktiver Reiter schwarz mit weißer Schrift (selected). -->
+    <style name="Widget.PaperNotes.SidebarTab" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">@drawable/bg_tool</item>
+        <item name="android:gravity">center</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textColor">@color/icon_tint</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <!-- Textknopf am Dialogende: mindestens 48dp hoch, kein Ripple. -->
+    <style name="Widget.PaperNotes.DialogButton" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">@drawable/bg_tool</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/black</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <!-- Flacher Werkzeugknopf der Werkzeugzeile (40dp). -->
+    <style name="Widget.PaperNotes.ToolButton" parent="Widget.PaperNotes.IconButton">
+        <item name="android:layout_height">40dp</item>
+    </style>
+
+    <!-- Symbolknopf: 48dp, kein Ripple, Auswahl = schwarz hinterlegt, Symbol weiß. -->
+    <style name="Widget.PaperNotes.IconButton" parent="">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:background">@drawable/bg_tool</item>
+        <item name="android:tint">@color/icon_tint</item>
+        <item name="android:scaleType">center</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <!-- Aktion der Auswahlleiste: Symbol über Beschriftung, deaktiviert grau, kein Ripple. -->
+    <style name="Widget.PaperNotes.SelectionAction" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:minWidth">72dp</item>
+        <item name="android:background">@drawable/bg_tool</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:drawablePadding">2dp</item>
+        <item name="android:drawableTint">@color/icon_tint</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">@color/text_tint</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <!-- Einstellungen: Zeile mit festem großem Touch-Ziel (mindestens 72dp). -->
+    <style name="Widget.PaperNotes.SettingsRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">72dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+    </style>
+
+    <style name="Widget.PaperNotes.SettingsLabel" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_tint</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <style name="Widget.PaperNotes.SettingsValue" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="Widget.PaperNotes.Divider" parent="">
+        <item name="android:layout_width">1dp</item>
+        <item name="android:layout_height">28dp</item>
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
+        <item name="android:layout_gravity">center_vertical</item>
+        <item name="android:background">@color/black</item>
+    </style>
+
+    <style name="Widget.PaperNotes.Seek" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:progressDrawable">@drawable/seekbar_track</item>
+        <item name="android:thumb">@drawable/seekbar_thumb</item>
+        <item name="android:splitTrack">false</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+    </style>
+</resources>

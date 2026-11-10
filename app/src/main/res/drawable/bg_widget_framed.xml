@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget-Hintergrund mit transparentem Außenrand: bg_widget (runder schwarzer Rahmen) um @dimen/widget_inset nach innen
+  versetzt. Der Launcher clippt das Widget auf eine abgerundete Form; der Rand sorgt dafür, dass der Rahmen nicht angeschnitten wird.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/bg_widget"
+    android:inset="@dimen/widget_inset" />

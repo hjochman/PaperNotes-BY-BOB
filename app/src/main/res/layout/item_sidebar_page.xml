@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Zeile der Seitenleiste: Vorschau (antippen = springen), rechts Seitennummer, Lesezeichen-Knopf und Menü. Größen setzt der Code. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingEnd="4dp">
+
+    <ImageView
+        android:id="@+id/pageThumb"
+        android:layout_width="100dp"
+        android:layout_height="130dp"
+        android:background="@drawable/bg_page_thumb"
+        android:clickable="true"
+        android:contentDescription="@string/sidebar_tab_pages"
+        android:focusable="true"
+        android:padding="4dp"
+        android:scaleType="fitXY" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/pageNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/black"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/pageAudio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableStart="@drawable/ic_speaker"
+            android:drawablePadding="2dp"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <ImageButton
+            android:id="@+id/pageBookmark"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/sidebar_bookmark_set"
+            android:src="@drawable/ic_bookmark_outline" />
+
+        <ImageButton
+            android:id="@+id/pageMenu"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/sidebar_page_menu"
+            android:src="@drawable/ic_dots_vertical" />
+    </LinearLayout>
+</LinearLayout>

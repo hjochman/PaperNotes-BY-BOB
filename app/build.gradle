@@ -1,0 +1,76 @@
+plugins {
+    id 'com.android.application'
+}
+
+def versionFile = rootProject.file('VERSION')
+def appVersionName = versionFile.exists() ? versionFile.text.trim() : '0.1.0'
+
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
+android {
+    namespace 'local.papernotes'
+    compileSdk 36
+    buildToolsVersion '36.0.0'
+
+    defaultConfig {
+        applicationId 'local.papernotes'
+        minSdk 29
+        targetSdk 29
+        versionCode 5
+        versionName appVersionName
+    }
+
+    signingConfigs {
+        release {
+            def keyAliasProp = keystoreProperties.getProperty('PAPYRUS_KEY_ALIAS')
+            def keyPasswordProp = keystoreProperties.getProperty('PAPYRUS_KEY_PASSWORD')
+            def storePasswordProp = keystoreProperties.getProperty('PAPYRUS_STORE_PASSWORD')
+            def storeFileProp = keystoreProperties.getProperty('storeFile')
+
+            if (keyAliasProp && keyPasswordProp && storePasswordProp) {
+                def ksFile = storeFileProp ? rootProject.file(storeFileProp) : rootProject.file('patch-key.jks')
+                if (ksFile.exists()) {
+                    storeFile ksFile
+                    storePassword storePasswordProp
+                    keyAlias keyAliasProp
+                    keyPassword keyPasswordProp
+                }
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            def releaseSigningConfig = signingConfigs.getByName('release')
+            if (releaseSigningConfig.storeFile != null && releaseSigningConfig.storeFile.exists()) {
+                signingConfig releaseSigningConfig
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError true
+        disable 'ExpiredTargetSdkVersion', 'GradleDependency', 'NewerVersionAvailable', 'ObsoleteSdkInt'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.15.0'
+    implementation 'com.google.code.gson:gson:2.12.1'
+    // WebDAV (MKCOL, MOVE, PROPFIND) kann HttpURLConnection nicht senden. Nur HTTPS, Standard-Zertifikatsprüfung (Nextcloud-Sync).
+    implementation 'com.squareup.okhttp3:okhttp:5.4.0'
+    compileOnly project(':eink-stub')
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'com.squareup.okhttp3:mockwebserver3:5.4.0'
+}

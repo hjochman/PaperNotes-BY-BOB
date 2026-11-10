@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Selbst gezeichnetes Auswahlkästchen, leer: weißes Quadrat mit schwarzem Rand (Auswahlmodus der Startseite). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp"
+    android:height="28dp"
+    android:viewportWidth="28"
+    android:viewportHeight="28">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M4,2 H24 A2,2 0 0 1 26,4 V24 A2,2 0 0 1 24,26 H4 A2,2 0 0 1 2,24 V4 A2,2 0 0 1 4,2 Z"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2.4" />
+</vector>

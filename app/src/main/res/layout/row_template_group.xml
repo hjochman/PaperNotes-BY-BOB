@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Eine Gruppenzeile im Vorlagendialog: Name, Blätter-Pfeile und Kachelfläche (Kacheln werden im Code eingefügt). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/groupName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="6dp"
+        android:textColor="#FF505050"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/arrowPrev"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:layout_width="32dp"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/tpl_scroll_prev"
+            android:src="@drawable/ic_chevron_left" />
+
+        <LinearLayout
+            android:id="@+id/tiles"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal" />
+
+        <ImageButton
+            android:id="@+id/arrowNext"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:layout_width="32dp"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/tpl_scroll_next"
+            android:src="@drawable/ic_chevron_right" />
+    </LinearLayout>
+</LinearLayout>

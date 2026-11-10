@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Editor-Layout. Kopfzeile und Werkzeugleiste sind flach und fest hoch; die Stift-/Radierer-Leiste liegt als eigenes
+  Fenster (popup_bars.xml) über dem Blatt und verkleinert die Schreibfläche nie. Ids sind die Schnittstelle zu EditorActivity.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- Kopfzeile -->
+    <LinearLayout
+        android:id="@+id/headerBar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/editor_header_height"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
+
+        <ImageButton
+            android:id="@+id/buttonBack"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/editor_back"
+            android:src="@drawable/ic_back" />
+
+        <TextView
+            android:id="@+id/textTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textColor="@color/black"
+            android:textSize="20sp" />
+
+        <!-- Zoom-Anzeige: nur sichtbar, solange der Zoom von 100 % abweicht -->
+        <TextView
+            android:id="@+id/textZoom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_widget_button_frame"
+            android:paddingStart="8dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="2dp"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <ImageButton
+            android:id="@+id/buttonPrevPage"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/page_prev"
+            android:src="@drawable/ic_chevron_left" />
+
+        <TextView
+            android:id="@+id/textPage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="40dp"
+            android:gravity="center"
+            android:textColor="@color/black"
+            android:textSize="18sp" />
+
+        <ImageButton
+            android:id="@+id/buttonNextPage"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/page_next"
+            android:src="@drawable/ic_chevron_right" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/buttonUndo"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/undo"
+            android:src="@drawable/ic_undo" />
+
+        <ImageButton
+            android:id="@+id/buttonRedo"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/redo"
+            android:src="@drawable/ic_redo" />
+
+        <ImageButton
+            android:id="@+id/buttonAddPage"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/page_add"
+            android:src="@drawable/ic_add" />
+
+        <!-- Seitenleiste -->
+        <ImageButton
+            android:id="@+id/buttonSidebar"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/sidebar"
+            android:src="@drawable/ic_sidebar" />
+
+        <!-- Platzhalter: Menü -->
+        <ImageButton
+            android:id="@+id/buttonMore"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/menu_more"
+            android:src="@drawable/ic_more" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/black" />
+
+    <!-- Werkzeugleiste -->
+    <LinearLayout
+        android:id="@+id/toolBar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/editor_toolbar_height"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/buttonToolPen"
+            style="@style/Widget.PaperNotes.ToolButton"
+            android:contentDescription="@string/tool_pen"
+            android:src="@drawable/ic_tool_pen" />
+
+        <ImageButton
+            android:id="@+id/buttonToolEraser"
+            style="@style/Widget.PaperNotes.ToolButton"
+            android:contentDescription="@string/tool_eraser"
+            android:src="@drawable/ic_tool_eraser" />
+
+        <ImageButton
+            android:id="@+id/buttonToolLasso"
+            style="@style/Widget.PaperNotes.ToolButton"
+            android:contentDescription="@string/tool_lasso"
+            android:src="@drawable/ic_tool_lasso" />
+
+        <ImageButton
+            android:id="@+id/buttonToolText"
+            style="@style/Widget.PaperNotes.ToolButton"
+            android:contentDescription="@string/tool_text"
+            android:src="@drawable/ic_tool_text" />
+
+        <ImageButton
+            android:id="@+id/buttonToolImage"
+            style="@style/Widget.PaperNotes.ToolButton"
+            android:contentDescription="@string/tool_image"
+            android:src="@drawable/ic_tool_image" />
+
+        <View style="@style/Widget.PaperNotes.Divider" />
+
+        <ImageButton
+            android:id="@+id/buttonTemplate"
+            style="@style/Widget.PaperNotes.ToolButton"
+            android:contentDescription="@string/tool_template"
+            android:src="@drawable/ic_tool_template" />
+
+        <ImageButton
+            android:id="@+id/buttonToolPageAdd"
+            style="@style/Widget.PaperNotes.ToolButton"
+            android:contentDescription="@string/page_add"
+            android:src="@drawable/ic_tool_page_add" />
+
+        <ImageButton
+            android:id="@+id/buttonDeletePage"
+            style="@style/Widget.PaperNotes.ToolButton"
+            android:contentDescription="@string/page_delete"
+            android:src="@drawable/ic_tool_page_delete" />
+
+        <View style="@style/Widget.PaperNotes.Divider" />
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent">
+
+            <ImageButton
+                android:id="@+id/buttonMic"
+                style="@style/Widget.PaperNotes.ToolButton"
+                android:contentDescription="@string/tool_audio"
+                android:src="@drawable/ic_tool_mic" />
+
+            <TextView
+                android:id="@+id/textMicBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="2dp"
+                android:layout_marginEnd="2dp"
+                android:background="@drawable/bg_widget_button_frame"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:textColor="@color/black"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/black" />
+
+    <local.papernotes.editor.PageCanvasView
+        android:id="@+id/pageCanvas"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Formatleiste der Textbox (A3): erscheint nur beim Bearbeiten, sitzt über der Tastatur. -->
+    <local.papernotes.editor.TextFormatBar
+        android:id="@+id/textFormatBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</LinearLayout>

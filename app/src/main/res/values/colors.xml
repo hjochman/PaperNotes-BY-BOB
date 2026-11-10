@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color>
+    <!-- Kopf- und Seitenwechselleiste der Startseite (helles Grau wie in HiNote). -->
+    <color name="surface_gray">#FFF1F1F1</color>
+    <color name="line_gray">#FFB0B0B0</color>
+    <color name="text_secondary">#FF444444</color>
+</resources>

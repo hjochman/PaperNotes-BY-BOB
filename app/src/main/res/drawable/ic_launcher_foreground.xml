@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icon-Bild mit Rand im sicheren Bereich des Adaptive Icons: die Launcher-Maske schneidet nur den weißen Rand ab. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_launcher_art"
+    android:inset="22%" />

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Knopf mit schwarzem Rand: weiß, gedrückt hellgrau. Kein Ripple. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFC8C8C8" />
+            <stroke android:width="2dp" android:color="#FF000000" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFFFF" />
+            <stroke android:width="2dp" android:color="#FF000000" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+</selector>
