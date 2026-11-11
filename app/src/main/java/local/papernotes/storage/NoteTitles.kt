@@ -1,5 +1,7 @@
 package local.papernotes.storage
 
+import java.text.Normalizer
+
 /** Regeln für Notiztitel: nicht leer (nach Trimmen), höchstens [MAX_LENGTH] Zeichen, keine Steuerzeichen. */
 object NoteTitles {
     const val MAX_LENGTH = 100
@@ -7,9 +9,9 @@ object NoteTitles {
     fun isValid(title: String): Boolean =
         title.isNotBlank() && title.length <= MAX_LENGTH && title.none { it.isISOControl() }
 
-    /** Entfernt Steuerzeichen und Rand-Leerzeichen und kürzt auf [MAX_LENGTH]. */
+    /** Entfernt Steuerzeichen und Rand-Leerzeichen, normalisiert nach NFC (Suche, Dateinamen) und kürzt auf [MAX_LENGTH]. */
     fun sanitize(input: String): String =
-        input.filterNot { it.isISOControl() }.trim().take(MAX_LENGTH).trim()
+        Normalizer.normalize(input.filterNot { it.isISOControl() }, Normalizer.Form.NFC).trim().take(MAX_LENGTH).trim()
 
     /** Titel einer Kopie; [format] hängt die Kennzeichnung an. Der Originaltitel wird gekürzt, bis alles in [MAX_LENGTH] passt. */
     fun copyTitle(original: String, format: (String) -> String): String {

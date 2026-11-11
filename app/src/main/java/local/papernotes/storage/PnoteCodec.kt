@@ -1,6 +1,5 @@
 package local.papernotes.storage
 
-import local.papernotes.editor.PageTransform
 import local.papernotes.model.Note
 import local.papernotes.model.Page
 import local.papernotes.model.Point
@@ -30,6 +29,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -53,7 +53,7 @@ data class NoteSummary(
 internal class PnoteException(val error: PnoteError) : RuntimeException(null, null, false, false)
 
 /**
- * Liest und schreibt `.pnote` (ZIP mit JSON). Format Version 2 (Version 1 wird gelesen und migriert):
+ * Liest und schreibt `.pnote` (ZIP mit JSON). Format Version 2 (ab 1.0.0 eingefroren; ältere Versionen gibt es nicht):
  *
  * ```
  * manifest.json        version, id, title, folderPath, created, modified, favorite, pinned, pageIds, importSource (optional,
@@ -67,11 +67,8 @@ internal class PnoteException(val error: PnoteError) : RuntimeException(null, nu
  * media/<uuid>.<ext>   optional, Bilder und Tonaufnahmen (.m4a); `file` in `images`/`audios` ist der Name unterhalb von `media/`
  * ```
  *
- * Koordinaten: Ab Version 2 liegen Punkte (x, y) und Strichbreiten (w) in Seitenkoordinaten (Maß: `width` x `height`
- * der Seite). Version 1 speicherte Ansichts-Pixel der Schreibfläche; die Fläche hatte volle Bildschirmbreite, die auch
- * die Seitenbreite ist (die Ansichtsbreite steht nicht im Paket). Beim Lesen wird Version 1 daher als "Ansichtsbreite =
- * Seitenbreite" interpretiert ([legacyViewToPage]; Faktor 1, die Zahlen bleiben also gleich). Geschrieben wird immer
- * Version 2, damit ältere App-Versionen (Prüfung `version > 1`) neue Notizen ablehnen, statt sie falsch zu lesen.
+ * Koordinaten: Punkte (x, y) und Strichbreiten (w) liegen in Seitenkoordinaten (Maß: `width` x `height` der Seite).
+ * Dateien mit einer Version unter [MIN_VERSION] oder über [FORMAT_VERSION] werden abgelehnt.
  *
  * Unbekannte JSON-Felder werden beim Lesen ignoriert. Es wird nichts geloggt; Fehler tragen weder Pfade noch Titel.
  * Eine Vorschau, die zu groß ist oder kein JPEG ist, wird beim Lesen verworfen (die Notiz bleibt lesbar). Ein altes
@@ -80,6 +77,9 @@ internal class PnoteException(val error: PnoteError) : RuntimeException(null, nu
  */
 object PnoteCodec {
     const val FORMAT_VERSION = 2
+
+    /** Kleinste lesbare Version; Version 1 (Ansichts-Pixel statt Seitenkoordinaten) wurde nie ausgeliefert. */
+    private const val MIN_VERSION = 2
     const val MAX_TOTAL_BYTES = 64L * 1024 * 1024
     const val MAX_ENTRY_BYTES = 16L * 1024 * 1024
     const val MAX_PREVIEW_BYTES = 2 * 1024 * 1024
@@ -101,13 +101,6 @@ object PnoteCodec {
     private val TEMPLATE_REGEX = Regex("[a-z0-9_]{1,32}")
     private val IMPORT_SOURCE_REGEX = Regex("[a-z]{1,16}:[0-9A-Za-z._-]{1,64}")
     private const val MAX_NAME_LENGTH = 200
-
-    /**
-     * Abbildung für Version-1-Striche: Pixel einer Schreibfläche der Breite [legacyViewWidth] -> Seitenkoordinaten
-     * (`toPage`). Ohne gespeicherte Ansichtsbreite gilt die Seitenbreite als Bezug (Identität).
-     */
-    internal fun legacyViewToPage(pageWidth: Int, legacyViewWidth: Int = pageWidth): PageTransform =
-        PageTransform.fitWidth(legacyViewWidth.toFloat(), pageWidth.toFloat())
 
     /** IDs sind Pfadbestandteil und müssen daher kleingeschriebene UUIDs sein. */
     fun isValidId(id: String): Boolean = UUID_REGEX.matches(id)
@@ -210,22 +203,30 @@ object PnoteCodec {
     private fun encodeUnchecked(note: Note, out: OutputStream) {
         val zip = ZipOutputStream(out)
         putJson(zip, MANIFEST) { writeManifest(it, note) }
-        note.preview?.let {
-            zip.putNextEntry(ZipEntry(PREVIEW_ENTRY))
-            zip.write(it)
-            zip.closeEntry()
-        }
+        note.preview?.let { putStored(zip, PREVIEW_ENTRY, it) }
         for (id in note.pageIds) {
             val page = note.pages.getValue(id)
             putJson(zip, "pages/$id.json") { writePage(it, page) }
         }
-        for ((name, bytes) in note.media) {
-            zip.putNextEntry(ZipEntry("media/$name"))
-            zip.write(bytes)
-            zip.closeEntry()
-        }
+        for ((name, bytes) in note.media) putStored(zip, "media/$name", bytes)
         zip.finish()
         zip.flush()
+    }
+
+    /**
+     * Schreibt [bytes] unkomprimiert (STORED). Vorschau (JPEG), Bilder und Aufnahmen (M4A) sind bereits komprimiert, Deflate
+     * würde bei jedem Speichern nur CPU kosten. Bei STORED verlangt `java.util.zip` Größe und CRC vor `putNextEntry`.
+     * Gültiges Standard-ZIP, das Format (Version 2) ändert sich nicht; alle Leser (`ZipInputStream`, PHP `ZipArchive`) lesen es.
+     */
+    private fun putStored(zip: ZipOutputStream, name: String, bytes: ByteArray) {
+        val entry = ZipEntry(name)
+        entry.method = ZipEntry.STORED
+        entry.size = bytes.size.toLong()
+        entry.compressedSize = bytes.size.toLong()
+        entry.crc = CRC32().also { it.update(bytes) }.value
+        zip.putNextEntry(entry)
+        zip.write(bytes)
+        zip.closeEntry()
     }
 
     private fun putJson(zip: ZipOutputStream, name: String, body: (JsonWriter) -> Unit) {
@@ -424,7 +425,7 @@ object PnoteCodec {
         val pages = LinkedHashMap<String, Page>()
         for (id in manifest.pageIds) {
             val bytes = unpacked.pages[id] ?: throw PnoteException(PnoteError.Corrupt)
-            pages[id] = parsePage(id, bytes, manifest.version)
+            pages[id] = parsePage(id, bytes)
         }
         PnoteResult.Ok(
             Note(
@@ -531,7 +532,6 @@ object PnoteCodec {
     internal class LimitedData(val size: Int, val bytes: ByteArray)
 
     private class Manifest(
-        val version: Int,
         val id: String,
         val title: String,
         val folderPath: String,
@@ -580,7 +580,7 @@ object PnoteCodec {
             throw PnoteException(PnoteError.Corrupt)
         }
         if (version > FORMAT_VERSION) throw PnoteException(PnoteError.UnsupportedVersion(version))
-        if (version < 1) throw PnoteException(PnoteError.Corrupt)
+        if (version < MIN_VERSION) throw PnoteException(PnoteError.Corrupt)
 
         var id: String? = null
         var title: String? = null
@@ -627,7 +627,6 @@ object PnoteCodec {
         if (ids.toSet().size != ids.size) throw PnoteException(PnoteError.Corrupt)
         if (!FolderPath.isValid(folderPath)) throw PnoteException(PnoteError.InvalidFolder)
         return Manifest(
-            version,
             noteId,
             title ?: throw PnoteException(PnoteError.Corrupt),
             folderPath,
@@ -641,7 +640,7 @@ object PnoteCodec {
         )
     }
 
-    private fun parsePage(id: String, bytes: ByteArray, version: Int): Page {
+    private fun parsePage(id: String, bytes: ByteArray): Page {
         var template = "blank"
         var width: Int? = null
         var height: Int? = null
@@ -671,10 +670,6 @@ object PnoteCodec {
         val h = height ?: throw PnoteException(PnoteError.Corrupt)
         if (w !in 1..MAX_PAGE_DIMENSION || h !in 1..MAX_PAGE_DIMENSION) throw PnoteException(PnoteError.Corrupt)
         if (!TEMPLATE_REGEX.matches(template)) throw PnoteException(PnoteError.Corrupt)
-        if (version < 2) {
-            val legacy = legacyViewToPage(w)
-            if (!legacy.isIdentity) strokes = strokes.map { legacy.toPage(it) }
-        }
         return Page(id, template, w, h, strokes, bookmarked, textboxes, images, audios)
     }
 

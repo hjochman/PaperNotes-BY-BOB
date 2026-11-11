@@ -16,16 +16,15 @@ build/
 PaperNotes-by-Bob-*.apk
 dist/
 .bob/
+CodeReviewPlan.md
 
 # Lokale Konfiguration und Secrets
 local.properties
 keystore.properties
 *.keystore
 *.jks
-tools/uber-apk-signer.jar
 
-# Temporaer fuer Setup
-PDF-Scan-BY-BOB/
+
 
 # Python
 __pycache__/

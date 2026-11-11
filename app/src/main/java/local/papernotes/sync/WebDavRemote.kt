@@ -7,10 +7,12 @@ import okhttp3.Credentials
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileInputStream
 import java.io.IOException
 import java.net.URI
 import java.security.MessageDigest
@@ -123,22 +125,39 @@ class WebDavRemote(
         call(req) { r -> if (r.code != 201 && r.code != 204) throw fail(r.code) }
     }
 
+    /**
+     * Lädt [source] hoch, ohne die Datei in den Speicher zu laden: erst ein Durchlauf für die SHA-1-Prüfsumme, dann ein
+     * Streaming-Body direkt aus der Datei (Content-Length bekannt). Die Datei wird dabei zweimal geöffnet; der Sync läuft
+     * nicht während des Schreibens im Editor, und die App ersetzt Notizdateien atomar. Ändert sie sich trotzdem dazwischen,
+     * passt die Prüfsumme nicht, und der Server lehnt den Upload ab (der nächste Lauf versucht es erneut).
+     */
     override fun upload(file: LocalFile, source: File) {
-        ensureTarget()
         if (source.length() > MAX_UPLOAD_BYTES) throw RemoteException(RemoteException.Kind.PROTOCOL)
-        // Einmal einlesen: Prüfsumme und gesendete Bytes stammen so aus demselben Stand der Datei.
-        val bytes = try {
-            source.readBytes()
+        ensureTarget()
+        val sha1 = try {
+            sha1Hex(source)
         } catch (e: IOException) {
             throw RemoteException(RemoteException.Kind.NETWORK)
         }
-        val sha1 = MessageDigest.getInstance("SHA-1").digest(bytes).joinToString("") { "%02x".format(it) }
         val req = request(SyncPaths.fileUrl(root, target, file.folder, file.id))
             .header("X-OC-Mtime", (file.modified / 1000).toString())
             .header("OC-Checksum", "SHA1:$sha1")
-            .put(bytes.toRequestBody(OCTET))
+            .put(source.asRequestBody(OCTET))
             .build()
         call(req) { r -> if (r.code != 201 && r.code != 204) throw fail(r.code) }
+    }
+
+    private fun sha1Hex(source: File): String {
+        val digest = MessageDigest.getInstance("SHA-1")
+        val buf = ByteArray(8192)
+        FileInputStream(source).use { input ->
+            while (true) {
+                val n = input.read(buf)
+                if (n < 0) break
+                digest.update(buf, 0, n)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     override fun delete(id: String, folder: String) = deleteUrl(SyncPaths.fileUrl(root, target, folder, id))
@@ -193,7 +212,12 @@ class WebDavRemote(
     companion object {
         private const val USER_AGENT = "PaperNotes-by-Bob"
         private const val MAX_LISTING_BYTES = 8 * 1024 * 1024
-        private const val MAX_UPLOAD_BYTES = 256L * 1024 * 1024
+        /**
+         * Obergrenze für eine hochgeladene Datei: Paketlimit [PnoteCodec.MAX_TOTAL_BYTES] (64 MB Inhalt) plus 1 MB ZIP-Overhead
+         * (Verzeichnisköpfe bei höchstens 2000 Einträgen), wie `MAX_FILE_BYTES` im Nextcloud-Plugin. Eine größere Datei kann
+         * die App nicht schreiben und das Plugin nicht lesen.
+         */
+        internal const val MAX_UPLOAD_BYTES = PnoteCodec.MAX_TOTAL_BYTES + 1024L * 1024
         private val XML = "application/xml; charset=utf-8".toMediaType()
         private val OCTET = "application/octet-stream".toMediaType()
         private const val PROPFIND_BODY = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +

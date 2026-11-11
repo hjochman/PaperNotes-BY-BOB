@@ -1,5 +1,6 @@
 package local.papernotes.storage
 
+import local.papernotes.model.Note
 import local.papernotes.model.NoteFactory
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -144,6 +145,101 @@ class PnoteCodecTest {
         assertEquals(listOf(audio), back.pages.getValue(pid).audios)
         assertArrayEquals(bytes, back.media.getValue(name))
         assertEquals(1, PnoteCodec.readSummary(file).valueOrNull()!!.audioCount)
+    }
+
+    private fun mediaNote(): Pair<Note, Map<String, ByteArray>> {
+        val base = TestData.simpleNote()
+        val pid = base.pageIds[0]
+        val png = "${TestData.uuid()}.png"
+        val m4a = "${TestData.uuid()}.m4a"
+        val media = mapOf(
+            png to ByteArray(5000) { (it * 7).toByte() },
+            m4a to ByteArray(20_000) { (it * 31 + 5).toByte() },
+        )
+        val page = base.pages.getValue(pid).copy(
+            images = listOf(local.papernotes.model.ImageAttachment("img-1", png, 10f, 20f, 300f, 200f)),
+            audios = listOf(local.papernotes.model.AudioAttachment("au-1", m4a, "Aufnahme 1", 12_345L)),
+        )
+        return base.copy(pages = mapOf(pid to page), media = media, preview = jpeg) to media
+    }
+
+    @Test
+    fun mediaAndPreviewAreStoredUncompressedWhileJsonIsDeflated() {
+        val (note, media) = mediaNote()
+        val file = File(tmp.root, "stored.pnote")
+        assertTrue(PnoteCodec.write(note, file) is PnoteResult.Ok)
+        java.util.zip.ZipFile(file).use { zf ->
+            val entries = zf.entries().toList().associateBy { it.name }
+            for ((name, bytes) in media) {
+                val e = entries.getValue("media/$name")
+                assertEquals(java.util.zip.ZipEntry.STORED, e.method)
+                assertEquals(bytes.size.toLong(), e.size)
+                assertEquals(bytes.size.toLong(), e.compressedSize)
+                assertArrayEquals(bytes, zf.getInputStream(e).readBytes())
+            }
+            assertEquals(java.util.zip.ZipEntry.STORED, entries.getValue("preview.jpg").method)
+            assertEquals(java.util.zip.ZipEntry.DEFLATED, entries.getValue("manifest.json").method)
+            assertTrue(entries.filterKeys { it.startsWith("pages/") }.values.all { it.method == java.util.zip.ZipEntry.DEFLATED })
+        }
+        // Optional: Beispieldatei für externe Leser (unzip, PHP ZipArchive) ablegen.
+        System.getenv("PNOTE_SAMPLE_DIR")?.let { dir ->
+            File(dir).mkdirs()
+            file.copyTo(File(dir, "stored-media.pnote"), overwrite = true)
+        }
+    }
+
+    @Test
+    fun storedMediaAreReadByAllReaders() {
+        val (note, media) = mediaNote()
+        val file = File(tmp.root, "readers.pnote")
+        assertTrue(PnoteCodec.write(note, file) is PnoteResult.Ok)
+        val back = PnoteCodec.read(file).valueOrNull()!!
+        assertEquals(note, back)
+        for ((name, bytes) in media) assertArrayEquals(bytes, back.media.getValue(name))
+        assertTrue(PnoteCodec.readSummary(file) is PnoteResult.Ok)
+        assertEquals(1, PnoteCodec.readSummary(file).valueOrNull()!!.audioCount)
+        assertArrayEquals(jpeg, PnoteCodec.readPreview(file))
+        // decode aus einem Stream (Sicherung/Teilen)
+        val out = java.io.ByteArrayOutputStream()
+        assertTrue(PnoteCodec.encode(note, out) is PnoteResult.Ok)
+        assertEquals(note, decode(out.toByteArray()).valueOrNull())
+    }
+
+    @Test
+    fun emptyMediaAndIncompressibleMediaAtEntryLimitRoundtrip() {
+        val base = TestData.simpleNote()
+        val empty = "${TestData.uuid()}.png"
+        val big = "${TestData.uuid()}.m4a"
+        val random = java.util.Random(42)
+        val bigBytes = ByteArray(PnoteCodec.MAX_ENTRY_BYTES.toInt()).also { random.nextBytes(it) }
+        val note = base.copy(media = mapOf(empty to ByteArray(0), big to bigBytes))
+        val file = File(tmp.root, "limit.pnote")
+        assertTrue(PnoteCodec.write(note, file) is PnoteResult.Ok)
+        val back = PnoteCodec.read(file).valueOrNull()!!
+        assertEquals(0, back.media.getValue(empty).size)
+        assertArrayEquals(bigBytes, back.media.getValue(big))
+    }
+
+    @Test
+    fun storedMediaStillRespectLimitsWhenReading() {
+        // 1:1 gespeicherte Einträge (kein Kompressionsfaktor) werden nicht abgelehnt, solange sie unter den Grenzen liegen
+        val ok = ByteArray(PnoteCodec.MAX_ENTRY_BYTES.toInt()).also { java.util.Random(1).nextBytes(it) }
+        assertTrue(decode(okZip(listOf("media/${TestData.uuid()}.bin" to ok), stored = true)) is PnoteResult.Ok)
+        // über dem Eintragslimit weiterhin abgelehnt, auch wenn der Eintrag STORED ist
+        val tooBig = ByteArray(PnoteCodec.MAX_ENTRY_BYTES.toInt() + 1).also { java.util.Random(2).nextBytes(it) }
+        assertErr(PnoteError.LimitExceeded, okZip(listOf("media/${TestData.uuid()}.bin" to tooBig), stored = true))
+        // Gesamtgrenze: 5 x 15 MB zufällige Bytes
+        val chunk = ByteArray(15 * 1024 * 1024).also { java.util.Random(3).nextBytes(it) }
+        val many = List(5) { "media/${TestData.uuid()}.bin" to chunk }
+        assertErr(PnoteError.LimitExceeded, okZip(many, stored = true))
+    }
+
+    @Test
+    fun writeRejectsMediaOverTheLimitsStill() {
+        val file = File(tmp.root, "toobig.pnote")
+        val tooBig = TestData.simpleNote().copy(media = mapOf("${TestData.uuid()}.bin" to ByteArray(PnoteCodec.MAX_ENTRY_BYTES.toInt() + 1)))
+        assertEquals(PnoteError.LimitExceeded, PnoteCodec.write(tooBig, file).errorOrNull())
+        assertFalse(file.exists())
     }
 
     @Test
@@ -297,10 +393,11 @@ class PnoteCodecTest {
 
     // ------------------------------------------------------------ Sicherheit beim Lesen
 
-    private fun okZip(extra: List<Pair<String, ByteArray>> = emptyList()): ByteArray {
+    private fun okZip(extra: List<Pair<String, ByteArray>> = emptyList(), stored: Boolean = false): ByteArray {
         val pid = TestData.uuid()
         return TestData.zip(
             listOf("manifest.json" to TestData.manifest(pageIds = listOf(pid)), "pages/$pid.json" to TestData.pageJson()) + extra,
+            stored,
         )
     }
 
@@ -429,7 +526,7 @@ class PnoteCodecTest {
         assertEquals(PnoteError.UnsupportedVersion(next), decode(z).errorOrNull())
     }
 
-    // ------------------------------------------------------------ Migration Version 1 -> 2 (Seitenkoordinaten)
+    // ------------------------------------------------------------ Format-Version (2 ist das Format von 1.0.0)
 
     private fun manifestVersion(bytes: ByteArray): Int {
         val zip = java.util.zip.ZipInputStream(ByteArrayInputStream(bytes))
@@ -448,49 +545,17 @@ class PnoteCodecTest {
     }
 
     @Test
-    fun version1NoteIsReadUnchangedAsPageCoordinates() {
-        // Version 1 hatte Ansichts-Pixel der vollbreiten Schreibfläche; Bezug ist die Seitenbreite (Faktor 1).
+    fun rejectsVersionOneBecauseItWasNeverShipped() {
+        // Version 1 (Ansichts-Pixel) wurde nie ausgeliefert; ab 1.0.0 ist Version 2 die kleinste lesbare Version.
         val pid = TestData.uuid()
-        val page = """{"template":"grid","width":1404,"height":1872,"bookmarked":false,""" +
-            """"strokes":[{"t":2,"w":4,"c":-16777216,"p":[[10.5,20.25,3,0.5],[700,1500,4,0.75]]}]}"""
+        val page = """{"template":"blank","width":1404,"height":1872,"bookmarked":false,"strokes":[]}"""
         val z = TestData.zip(
             listOf(
                 "manifest.json" to TestData.manifest(pageIds = listOf(pid), version = 1),
                 "pages/$pid.json" to page.toByteArray(),
             ),
         )
-        val s = decode(z).valueOrNull()!!.pages.getValue(pid).strokes.single()
-        assertEquals(4f, s.width, 0f)
-        assertEquals(local.papernotes.model.Point(10.5f, 20.25f, 3L, 0.5f), s.points[0])
-        assertEquals(local.papernotes.model.Point(700f, 1500f, 4L, 0.75f), s.points[1])
-    }
-
-    @Test
-    fun version1NoteIsWrittenAsVersion2WithSameStrokes() {
-        val pid = TestData.uuid()
-        val page = """{"template":"blank","width":1404,"height":1872,"bookmarked":false,""" +
-            """"strokes":[{"t":1,"w":2.5,"c":-1,"p":[[1,2,3,0.5]]}]}"""
-        val z = TestData.zip(
-            listOf(
-                "manifest.json" to TestData.manifest(pageIds = listOf(pid), version = 1),
-                "pages/$pid.json" to page.toByteArray(),
-            ),
-        )
-        val old = decode(z).valueOrNull()!!
-        val rewritten = TestData.encode(old)
-        assertEquals(2, manifestVersion(rewritten))
-        assertEquals(old, decode(rewritten).valueOrNull())
-    }
-
-    @Test
-    fun legacyViewToPageScalesPointsAndWidthByPageOverViewWidth() {
-        // Falls eine Ansichtsbreite bekannt wäre (hier 702 statt 1404): Seitenkoordinaten = Pixel * 2, Breite * 2.
-        val t = PnoteCodec.legacyViewToPage(pageWidth = 1404, legacyViewWidth = 702)
-        val s = t.toPage(local.papernotes.model.Stroke(2, 3f, 0, listOf(local.papernotes.model.Point(100f, 50f, 1L, 0.5f))))
-        assertEquals(6f, s.width, 0f)
-        assertEquals(200f, s.points[0].x, 0f)
-        assertEquals(100f, s.points[0].y, 0f)
-        assertTrue(PnoteCodec.legacyViewToPage(1404).isIdentity)
+        assertEquals(PnoteError.Corrupt, decode(z).errorOrNull())
     }
 
     @Test

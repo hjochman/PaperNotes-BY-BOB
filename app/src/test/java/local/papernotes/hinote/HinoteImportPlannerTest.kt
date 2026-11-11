@@ -22,6 +22,14 @@ class HinoteImportPlannerTest {
     }
 
     @Test
+    fun decomposedUmlautsFromMacSourcesMapToTheComposedFolder() {
+        assertEquals("HiNote-Import/B\u00FCro", HinoteImportPlanner.folderFor("Bu\u0308ro"))
+        assertEquals("HiNote-Import/B\u00FCro", HinoteImportPlanner.folderFor("B\u00FCro"))
+        assertEquals("HiNote-Import/\u00DCbung/M\u00E4rz", HinoteImportPlanner.folderFor("U\u0308bung/Ma\u0308rz"))
+        assertEquals("HiNote-Import", HinoteImportPlanner.folderFor("\u0308"))
+    }
+
+    @Test
     fun invalidOrTooDeepFoldersFallBackToImportFolder() {
         for (rel in listOf("A/B/C/D", ".versteckt", "a..b/.x", "x*y", "a/ b", "a\\b", "..", " ", "a".repeat(81))) {
             assertEquals(rel, "HiNote-Import", HinoteImportPlanner.folderFor(rel))

@@ -33,14 +33,20 @@ class PaperNotesTestRunner {
 		$this->testMaxEntriesLimit();
 		$this->testMaxTotalBytesLimit();
 		$this->testCorruptManifests();
+		$this->testErrorMessagesDoNotLeakFileContent();
+		$this->testJsonErrorsThrowParseException();
 		$this->testAll21TemplatesExport();
 		$this->testPreviewExtraction();
 		$this->testRichPageContentParsing();
 		$this->testPageContentLimitsAndSanitizing();
 		$this->testMediaExtraction();
+		$this->testStoredMediaZip();
 		$this->testPdfWithTextImageAudio();
 		$this->testPdfAudioOption();
 		$this->testTextRenderer();
+		$this->testFileSizeCheck();
+		$this->testViewerTranslations();
+		$this->testL10nFiles();
 
 		echo "\n================================================\n";
 		echo "Results: {$this->passed} passed, {$this->failed} failed\n";
@@ -57,12 +63,21 @@ class PaperNotesTestRunner {
 		}
 	}
 
-	private function createTestZip(array $entries): string {
+	/**
+	 * @param array<string, string> $entries
+	 * @param list<string> $storedPrefixes Entries whose name starts with one of these are written uncompressed (STORED), like the app does for media
+	 */
+	private function createTestZip(array $entries, array $storedPrefixes = []): string {
 		$tmp = tempnam(sys_get_temp_dir(), 'test_pnote_');
 		$zip = new ZipArchive();
 		$zip->open($tmp, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 		foreach ($entries as $name => $content) {
 			$zip->addFromString($name, $content);
+			foreach ($storedPrefixes as $prefix) {
+				if (str_starts_with($name, $prefix)) {
+					$zip->setCompressionName($name, ZipArchive::CM_STORE);
+				}
+			}
 		}
 		$zip->close();
 		return $tmp;
@@ -254,6 +269,126 @@ class PaperNotesTestRunner {
 		} finally {
 			@unlink($zipPath);
 		}
+
+		// Version 1 was never shipped; 2 is the smallest readable version.
+		foreach ([0, 1] as $old) {
+			$zipPath = $this->createTestZip([
+				'manifest.json' => '{"version":' . $old . ',"id":"11111111-2222-3333-4444-555555555555","title":"t","folderPath":"","created":1,"modified":2,"favorite":false,"pinned":false,"pageIds":[]}',
+			]);
+			try {
+				$this->parser->parseFile($zipPath);
+				$this->assert(false, "Format: Reject version {$old}", 'Should have rejected version below minimum');
+			} catch (PnoteParseException) {
+				$this->assert(true, "Format: Reject version {$old}");
+			} finally {
+				@unlink($zipPath);
+			}
+		}
+	}
+
+	private function testErrorMessagesDoNotLeakFileContent(): void {
+		$markup = '<img src=x onerror=alert(1)>';
+		$validManifest = '{"version":2,"id":"11111111-2222-3333-4444-555555555555","title":"t","folderPath":"","created":1,"modified":2,"favorite":false,"pinned":false,"pageIds":[]}';
+		$badPageIdManifest = (string)json_encode([
+			'version' => 2,
+			'id' => '11111111-2222-3333-4444-555555555555',
+			'title' => 't',
+			'pageIds' => [$markup],
+		]);
+		$dupPageId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+		$dupPageManifest = (string)json_encode([
+			'version' => 2,
+			'id' => '11111111-2222-3333-4444-555555555555',
+			'title' => 't',
+			'pageIds' => [$dupPageId, $dupPageId],
+		]);
+
+		$cases = [
+			'markup in entry name' => [['manifest.json' => $validManifest, $markup => 'x']],
+			'markup in page entry name' => [['manifest.json' => $validManifest, "pages/{$markup}.json" => '{}']],
+			'markup in page ID' => [['manifest.json' => $badPageIdManifest]],
+			'duplicate page ID' => [['manifest.json' => $dupPageManifest]],
+		];
+		foreach ($cases as $label => [$entries]) {
+			$zipPath = $this->createTestZip($entries);
+			try {
+				$this->parser->parseFile($zipPath);
+				$this->assert(false, "Security: Error text without file content ({$label})", 'no exception');
+			} catch (PnoteParseException $e) {
+				$msg = $e->getMessage();
+				$this->assert(
+					!str_contains($msg, '<') && !str_contains($msg, 'onerror') && !str_contains($msg, 'alert') && !str_contains($msg, $dupPageId),
+					"Security: Error text without file content ({$label})",
+					$msg
+				);
+			} finally {
+				@unlink($zipPath);
+			}
+		}
+
+		// A page listed in the manifest but missing in the archive must not name the page either.
+		$missingManifest = (string)json_encode([
+			'version' => 2,
+			'id' => '11111111-2222-3333-4444-555555555555',
+			'title' => 't',
+			'pageIds' => [$dupPageId],
+		]);
+		$zipPath = $this->createTestZip(['manifest.json' => $missingManifest]);
+		try {
+			$this->parser->parseFile($zipPath);
+			$this->assert(false, 'Security: Missing page error without page ID', 'no exception');
+		} catch (PnoteParseException $e) {
+			$this->assert(!str_contains($e->getMessage(), $dupPageId), 'Security: Missing page error without page ID', $e->getMessage());
+		} finally {
+			@unlink($zipPath);
+		}
+
+		// parsePage messages must not contain the page ID either.
+		try {
+			$this->parser->parsePage($markup, '{"width":0}');
+			$this->assert(false, 'Security: parsePage error without page ID', 'no exception');
+		} catch (PnoteParseException $e) {
+			$this->assert(!str_contains($e->getMessage(), '<') && !str_contains($e->getMessage(), 'onerror'), 'Security: parsePage error without page ID', $e->getMessage());
+		}
+	}
+
+	private function testJsonErrorsThrowParseException(): void {
+		foreach (['{not json', '', '[1,2', '"just a string"', '{"a":' . str_repeat('[', 40) . str_repeat(']', 40) . '}'] as $i => $json) {
+			try {
+				$this->parser->parseManifest($json);
+				$this->assert(false, "JSON: Invalid manifest JSON #{$i} rejected", 'no exception');
+			} catch (PnoteParseException) {
+				$this->assert(true, "JSON: Invalid manifest JSON #{$i} rejected");
+			}
+			try {
+				$this->parser->parsePage('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', $json);
+				$this->assert(false, "JSON: Invalid page JSON #{$i} rejected", 'no exception');
+			} catch (PnoteParseException) {
+				$this->assert(true, "JSON: Invalid page JSON #{$i} rejected");
+			}
+		}
+
+		$pageId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+		$manifest = '{"version":2,"id":"11111111-2222-3333-4444-555555555555","title":"t","folderPath":"","created":1,"modified":2,"favorite":false,"pinned":false,"pageIds":["' . $pageId . '"]}';
+		$zipPath = $this->createTestZip(['manifest.json' => $manifest, "pages/{$pageId}.json" => '{broken']);
+		try {
+			$this->parser->parseFile($zipPath);
+			$this->assert(false, 'JSON: Broken page inside archive rejected', 'no exception');
+		} catch (PnoteParseException) {
+			$this->assert(true, 'JSON: Broken page inside archive rejected');
+		} finally {
+			@unlink($zipPath);
+		}
+
+		$zipPath = $this->createTestZip(['manifest.json' => '{broken']);
+		try {
+			$this->parser->parseFile($zipPath);
+			$this->assert(false, 'JSON: Broken manifest inside archive rejected', 'no exception');
+		} catch (PnoteParseException) {
+			$this->assert(true, 'JSON: Broken manifest inside archive rejected');
+		} finally {
+			@unlink($zipPath);
+		}
 	}
 
 	private function testAll21TemplatesExport(): void {
@@ -405,7 +540,7 @@ class PaperNotesTestRunner {
 				['file' => self::AUDIO_FILE, 'title' => str_repeat('x', 500), 'duration' => -3],
 			],
 		];
-		$p = $this->parser->parsePage(self::PAGE_ID, (string)json_encode($page), 2);
+		$p = $this->parser->parsePage(self::PAGE_ID, (string)json_encode($page));
 		$this->assert(count($p['textboxes']) === 2, 'B1 Sanitize: Boxes without size are dropped');
 		$this->assert($p['textboxes'][0]['spans'] === [[0, 0, 2, 0]], 'B1 Sanitize: Invalid spans dropped, ranges clamped');
 		$this->assert($p['textboxes'][0]['paras'] === [[0, 2, 4, 4]], 'B1 Sanitize: Paragraph values clamped');
@@ -415,14 +550,14 @@ class PaperNotesTestRunner {
 
 		$many = ['textboxes' => array_fill(0, 5001, ['text' => 'a', 'x' => 0, 'y' => 0, 'w' => 10, 'h' => 10])];
 		try {
-			$this->parser->parsePage(self::PAGE_ID, (string)json_encode($many), 2);
+			$this->parser->parsePage(self::PAGE_ID, (string)json_encode($many));
 			$this->assert(false, 'B1 Limit: Too many text boxes rejected', 'no exception');
 		} catch (PnoteParseException) {
 			$this->assert(true, 'B1 Limit: Too many text boxes rejected');
 		}
 		$long = ['textboxes' => [['text' => str_repeat('a', 200001), 'x' => 0, 'y' => 0, 'w' => 10, 'h' => 10]]];
 		try {
-			$this->parser->parsePage(self::PAGE_ID, (string)json_encode($long), 2);
+			$this->parser->parsePage(self::PAGE_ID, (string)json_encode($long));
 			$this->assert(false, 'B1 Limit: Overlong text rejected', 'no exception');
 		} catch (PnoteParseException) {
 			$this->assert(true, 'B1 Limit: Overlong text rejected');
@@ -436,6 +571,33 @@ class PaperNotesTestRunner {
 			$this->assert($this->parser->extractMedia($zip, '00000000-0000-0000-0000-000000000000.png') === null, 'B1 Media: Missing file gives null');
 			$this->assert($this->parser->extractMedia($zip, '../manifest.json') === null, 'B1 Media: Path traversal name rejected');
 			$this->assert($this->parser->extractMedia($zip, 'manifest.json') === null, 'B1 Media: Non-media entry rejected');
+		} finally {
+			@unlink($zip);
+		}
+	}
+
+	/** The app writes media and preview uncompressed (STORED); the parser must read such archives like any other. */
+	private function testStoredMediaZip(): void {
+		$fakeJpeg = "\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00samplejpegdata";
+		$audio = random_bytes(4096);
+		$zip = $this->createTestZip([
+			'manifest.json' => $this->manifestJson(),
+			'preview.jpg' => $fakeJpeg,
+			'pages/' . self::PAGE_ID . '.json' => (string)json_encode($this->richPage()),
+			'media/' . self::IMG_FILE => $this->tinyPng(),
+			'media/' . self::AUDIO_FILE => $audio,
+		], ['media/', 'preview.jpg']);
+		try {
+			$za = new ZipArchive();
+			$za->open($zip, ZipArchive::RDONLY);
+			$stat = $za->statName('media/' . self::AUDIO_FILE);
+			$za->close();
+			$this->assert($stat !== false && $stat['comp_method'] === ZipArchive::CM_STORE && $stat['comp_size'] === $stat['size'], 'STORED: Test archive really holds uncompressed media');
+			$parsed = $this->parser->parseFile($zip, false, true);
+			$this->assert(count($parsed['pages']) === 1 && ($parsed['media'][self::AUDIO_FILE] ?? null) === $audio, 'STORED: Parse delivers media bytes unchanged');
+			$this->assert($this->parser->extractMedia($zip, self::AUDIO_FILE) === $audio, 'STORED: extractMedia reads uncompressed entry');
+			$this->assert($this->parser->extractPreview($zip) === $fakeJpeg, 'STORED: extractPreview reads uncompressed preview');
+			$this->assert($this->parser->parseFile($zip, true) !== [], 'STORED: Manifest-only parse works');
 		} finally {
 			@unlink($zip);
 		}
@@ -512,6 +674,82 @@ class PaperNotesTestRunner {
 		$box = ['x' => 0, 'y' => 0, 'w' => 80, 'h' => 40, 'size' => 20, 'bgColor' => 0, 'text' => str_repeat('Wort ', 200), 'spans' => [], 'paras' => []];
 		$stream = $r->renderTextbox($box, 1.0, 100.0);
 		$this->assert(str_contains($stream, 're W n') && substr_count($stream, 'BT') <= 4, 'B1 Text: Long text is clipped to the box');
+	}
+
+	private function testFileSizeCheck(): void {
+		$this->assert($this->parser->isAcceptableFileSize(1), 'M6 Size: Small file accepted');
+		$this->assert($this->parser->isAcceptableFileSize(PnoteParserService::MAX_FILE_BYTES), 'M6 Size: Limit itself accepted');
+		$this->assert(!$this->parser->isAcceptableFileSize(PnoteParserService::MAX_FILE_BYTES + 1), 'M6 Size: Above limit rejected');
+		$this->assert(!$this->parser->isAcceptableFileSize(0) && !$this->parser->isAcceptableFileSize(-1), 'M6 Size: Empty or invalid size rejected');
+		$this->assert(PnoteParserService::MAX_FILE_BYTES > PnoteParserService::MAX_TOTAL_BYTES, 'M6 Size: File limit leaves room for ZIP overhead');
+	}
+
+	/**
+	 * Returns the texts of one language block of VIEWER_TEXTS in the viewer script.
+	 *
+	 * @return array<string, string> key => text
+	 */
+	private function viewerTexts(string $js, string $lang): array {
+		if (preg_match('/const VIEWER_TEXTS = \{(.*?)\n    \};/s', $js, $block) !== 1) {
+			return [];
+		}
+		if (preg_match('/\n        ' . $lang . ': \{(.*?)\n        \}/s', $block[1], $section) !== 1) {
+			return [];
+		}
+		preg_match_all("/^            (\w+): '((?:[^'\\\\]|\\\\.)*)'/m", $section[1], $pairs, PREG_SET_ORDER);
+		$texts = [];
+		foreach ($pairs as $pair) {
+			$texts[$pair[1]] = $pair[2];
+		}
+		return $texts;
+	}
+
+	private function testViewerTranslations(): void {
+		$js = (string)file_get_contents(__DIR__ . '/../js/papernotes-viewer.js');
+		$de = $this->viewerTexts($js, 'de');
+		$en = $this->viewerTexts($js, 'en');
+		$this->assert(count($de) > 0 && count($en) > 0, 'M4 Viewer texts: Both language tables found');
+		$this->assert(array_keys($de) === array_keys($en), 'M4 Viewer texts: Same keys in German and English', implode(',', array_merge(array_diff(array_keys($de), array_keys($en)), array_diff(array_keys($en), array_keys($de)))));
+
+		$empty = array_filter(array_merge($de, $en), fn(string $t) => trim($t) === '');
+		$this->assert(count($empty) === 0, 'M4 Viewer texts: No empty text');
+
+		$same = true;
+		foreach ($de as $key => $text) {
+			preg_match_all('/\{(\w+)\}/', $text, $a);
+			preg_match_all('/\{(\w+)\}/', $en[$key] ?? '', $b);
+			sort($a[1]);
+			sort($b[1]);
+			if ($a[1] !== $b[1]) {
+				$same = false;
+			}
+		}
+		$this->assert($same, 'M4 Viewer texts: Placeholders match in both languages');
+
+		preg_match_all("/\btr\('(\w+)'/", $js, $used);
+		$usedKeys = array_unique($used[1]);
+		$missing = array_diff($usedKeys, array_keys($en));
+		$this->assert(count($usedKeys) > 0 && count($missing) === 0, 'M4 Viewer texts: Every key used in the script is defined', implode(',', $missing));
+
+		$unused = array_diff(array_keys($en), $usedKeys);
+		$this->assert(count($unused) === 0, 'M4 Viewer texts: No unused key', implode(',', $unused));
+	}
+
+	private function testL10nFiles(): void {
+		$dir = __DIR__ . '/../l10n/';
+		$de = json_decode((string)file_get_contents($dir . 'de.json'), true);
+		$en = json_decode((string)file_get_contents($dir . 'en.json'), true);
+		$this->assert(is_array($de['translations'] ?? null) && is_array($en['translations'] ?? null), 'M4 l10n: de.json and en.json are valid');
+		$this->assert(array_keys($de['translations'] ?? []) === array_keys($en['translations'] ?? []), 'M4 l10n: Same keys in de.json and en.json');
+		foreach (['de' => $de, 'en' => $en] as $lang => $json) {
+			$js = (string)file_get_contents($dir . $lang . '.js');
+			preg_match_all('/^\s+"((?:[^"\\\\]|\\\\.)*)": "((?:[^"\\\\]|\\\\.)*)",?$/m', $js, $pairs, PREG_SET_ORDER);
+			$fromJs = [];
+			foreach ($pairs as $pair) {
+				$fromJs[json_decode('"' . $pair[1] . '"')] = json_decode('"' . $pair[2] . '"');
+			}
+			$this->assert($fromJs === ($json['translations'] ?? null), "M4 l10n: {$lang}.js matches {$lang}.json");
+		}
 	}
 }
 

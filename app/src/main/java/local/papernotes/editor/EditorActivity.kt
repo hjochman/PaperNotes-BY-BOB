@@ -18,6 +18,7 @@ import android.os.SystemClock
 import android.graphics.Rect
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.PopupMenu
@@ -33,6 +34,7 @@ import local.papernotes.home.PreviewStamper
 import local.papernotes.model.AudioAttachment
 import local.papernotes.storage.BackupPolicy
 import local.papernotes.storage.BackupStore
+import local.papernotes.storage.FailureStreak
 import local.papernotes.storage.NoteRepository
 import local.papernotes.storage.NoteTitles
 import local.papernotes.storage.PnoteCodec
@@ -54,10 +56,13 @@ class EditorActivity : Activity() {
     private val ui = Handler(Looper.getMainLooper())
     private var io: ExecutorService? = null
     private var session: NoteSession? = null
+    private var keyboardListener: ViewTreeObserver.OnGlobalLayoutListener? = null
     private lateinit var tools: EditorToolState
 
     private var lastBackupTime = 0L
     private var modifiedSinceBackup = false
+    private val backupFailures = FailureStreak(BACKUP_FAILURE_THRESHOLD)
+    private val pruneFailures = FailureStreak(PRUNE_FAILURE_THRESHOLD)
     private val backupTick = object : Runnable {
         override fun run() {
             checkAndRunBackup(isClosing = false)
@@ -157,13 +162,15 @@ class EditorActivity : Activity() {
     private fun trackKeyboard() {
         val content = findViewById<View>(android.R.id.content)
         val decor = window.decorView
-        decor.viewTreeObserver.addOnGlobalLayoutListener {
+        val listener = ViewTreeObserver.OnGlobalLayoutListener {
             val visible = Rect()
             decor.getWindowVisibleDisplayFrame(visible)
             val gap = decor.rootView.height - visible.bottom
             val keyboard = if (gap > decor.rootView.height / 6) gap else 0
             if (content.paddingBottom != keyboard) content.setPadding(0, 0, 0, keyboard)
         }
+        keyboardListener = listener
+        decor.viewTreeObserver.addOnGlobalLayoutListener(listener)
     }
 
     private fun bindViews() {
@@ -531,8 +538,13 @@ class EditorActivity : Activity() {
         ui.post(audioTick)
     }
 
-    /** Beendet die Aufnahme und hängt sie an die Seite, auf der sie begonnen wurde. Liest synchron (lokale, kleine Datei). */
-    private fun stopRecording() {
+    /**
+     * Beendet die Aufnahme und hängt sie an die Seite, auf der sie begonnen wurde. Die Datei (bis 16 MB) wird auf dem
+     * io-Executor gelesen und erst danach im UI-Thread an die Sitzung übergeben (nur, wenn die Activity noch lebt und die
+     * Sitzung existiert). Mit [blocking] (onPause) wird synchron gelesen: danach speichert [persist] sofort, und die
+     * Activity kann gleich beendet werden, die Aufnahme ginge sonst verloren.
+     */
+    private fun stopRecording(blocking: Boolean = false) {
         val r = recorder ?: return
         recorder = null
         val file = recordFile
@@ -547,34 +559,57 @@ class EditorActivity : Activity() {
             stopped = false // zu kurz oder keine Daten
         }
         r.release()
-        val s = session
-        if (stopped && file != null && pageId != null && s != null) {
-            val bytes = try {
-                if (file.length() in 1..PnoteCodec.MAX_ENTRY_BYTES) file.readBytes() else null
-            } catch (e: java.io.IOException) {
-                null
-            }
-            val page = s.note.pages[pageId]
-            if (bytes == null || page == null) {
-                toast(R.string.error_audio_record)
+        if (stopped && file != null && pageId != null && session != null) {
+            val executor = io
+            if (blocking || executor == null) {
+                val bytes = readRecording(file)
+                file.delete()
+                attachRecording(pageId, duration, bytes)
             } else {
-                val audio = AudioAttachment(
-                    id = UUID.randomUUID().toString(),
-                    filePath = "${UUID.randomUUID()}.m4a",
-                    title = getString(R.string.audio_title_format, page.audios.size + 1),
-                    durationMs = duration,
-                )
-                if (s.onAudioAdded(pageId, audio, bytes)) {
-                    modifiedSinceBackup = true
-                    if (s.currentPage.id == pageId) {
-                        audioIndex = page.audios.size
-                        refreshPageAudioIndicator()
+                executor.execute {
+                    val bytes = readRecording(file)
+                    file.delete()
+                    ui.post {
+                        if (isDestroyed || isFinishing || session == null) return@post
+                        attachRecording(pageId, duration, bytes)
                     }
                 }
             }
+        } else {
+            file?.delete()
         }
-        file?.delete()
         refreshAudioUi()
+    }
+
+    /** Liest die fertige Aufnahme; null bei leerer oder zu großer Datei oder Lesefehler. Darf auf jedem Thread laufen. */
+    private fun readRecording(file: File): ByteArray? = try {
+        if (file.length() in 1..PnoteCodec.MAX_ENTRY_BYTES) file.readBytes() else null
+    } catch (e: java.io.IOException) {
+        null
+    }
+
+    /** Hängt die gelesene Aufnahme [bytes] an die Seite [pageId] (nur im UI-Thread, Sitzung muss existieren). */
+    private fun attachRecording(pageId: String, duration: Long, bytes: ByteArray?) {
+        val s = session ?: return
+        val page = s.note.pages[pageId]
+        if (bytes == null || page == null) {
+            toast(R.string.error_audio_record)
+            return
+        }
+        val audio = AudioAttachment(
+            id = UUID.randomUUID().toString(),
+            filePath = "${UUID.randomUUID()}.m4a",
+            title = getString(R.string.audio_title_format, page.audios.size + 1),
+            durationMs = duration,
+        )
+        if (s.onAudioAdded(pageId, audio, bytes)) {
+            modifiedSinceBackup = true
+            if (s.currentPage.id == pageId) {
+                audioIndex = page.audios.size
+                refreshPageAudioIndicator()
+            }
+            refreshAudioUi()
+        }
     }
 
     /** Abspielen starten, pausieren oder fortsetzen. Die Bytes der Spur werden dazu kurz in den Cache entpackt. */
@@ -640,8 +675,8 @@ class EditorActivity : Activity() {
         refreshAudioUi()
     }
 
-    private fun stopAudio() {
-        stopRecording()
+    private fun stopAudio(blockingRecording: Boolean = false) {
+        stopRecording(blockingRecording)
         stopPlayback()
     }
 
@@ -768,9 +803,11 @@ class EditorActivity : Activity() {
 
     private fun startSession(repo: NoteRepository, note: local.papernotes.model.Note) {
         val executor = io ?: return
-        val stamper = PreviewStamper(this)
+        // Das Schreib-Lambda lebt so lange wie die Warteschlange: Anwendungskontext statt Activity halten.
+        val app = applicationContext
+        val stamper = PreviewStamper(app)
         val s = NoteSession(note, {
-            repo.save(stamper.stamp(it)).also { r -> if (r is PnoteResult.Ok) NotesWidgetUpdater.requestUpdate(this) }
+            repo.save(stamper.stamp(it)).also { r -> if (r is PnoteResult.Ok) NotesWidgetUpdater.requestUpdate(app) }
         }, executor, HandlerScheduler(ui))
         s.onSaveResult = { ok -> if (!ok) ui.post { if (!isDestroyed) toast(R.string.error_save) } }
         session = s
@@ -937,13 +974,15 @@ class EditorActivity : Activity() {
         val uri = data?.data ?: return
         val executor = io ?: return
         executor.execute {
-            val bytes = try {
+            val read = try {
                 contentResolver.openInputStream(uri)?.use { readLimited(it) }
             } catch (e: java.io.IOException) {
                 null
             } catch (e: SecurityException) {
                 null
             }
+            // EXIF-Drehung einmal beim Import anwenden (im Hintergrund, nie im UI-Thread).
+            val bytes = read?.let { ImageAttachmentView.upright(it) }
             ui.post {
                 if (isDestroyed || isFinishing || session == null) return@post
                 if (bytes == null || !canvas.addImage(bytes)) toast(R.string.error_image) else toast(R.string.image_menu_hint)
@@ -974,7 +1013,7 @@ class EditorActivity : Activity() {
         super.onPause()
         SyncCoordinator.editing = false
         if (::popup.isInitialized && popup.isShowing) popup.dismiss()
-        stopAudio()
+        stopAudio(blockingRecording = true)
         persist()
     }
 
@@ -1001,12 +1040,22 @@ class EditorActivity : Activity() {
         val executor = io ?: return
         executor.execute {
             val file = NoteRepository(root).noteFile(noteId) ?: return@execute
-            try {
-                BackupStore(root).backup(noteId, file, now)
-            } catch (ignored: Exception) {
+            val store = BackupStore(root)
+            val ok = try {
+                store.backup(noteId, file, now) is PnoteResult.Ok
+            } catch (e: Exception) {
+                false
+            }
+            if (ok) backupFailures.onSuccess() else if (backupFailures.onFailure()) notifyBackup(R.string.error_backup)
+            // Aufräumen alter Sicherungen ist eine eigene, leisere Kategorie: die Sicherung selbst gilt als gelungen.
+            if (ok) {
+                if (store.lastPruneFailures == 0) pruneFailures.onSuccess()
+                else if (pruneFailures.onFailure()) notifyBackup(R.string.error_backup_prune)
             }
         }
     }
+
+    private fun notifyBackup(resId: Int) = ui.post { if (!isDestroyed) toast(resId) }
 
     private fun persist() {
         val s = session ?: return
@@ -1022,6 +1071,11 @@ class EditorActivity : Activity() {
     }
 
     override fun onDestroy() {
+        keyboardListener?.let { l ->
+            val observer = window.decorView.viewTreeObserver
+            if (observer.isAlive) observer.removeOnGlobalLayoutListener(l)
+        }
+        keyboardListener = null
         ui.removeCallbacks(backupTick)
         exportFlow.cancel()
         checkAndRunBackup(isClosing = true)
@@ -1067,6 +1121,10 @@ class EditorActivity : Activity() {
         private const val PREFS_NAME = "editor_tools"
         private const val PREFS_SETTINGS = "settings"
         private const val BACKUP_TICK_MS = 10_000L
+
+        /** Hinweis, wenn so viele Sicherungsläufe in Folge scheitern (Sicherung selbst bzw. nur das Aufräumen). */
+        private const val BACKUP_FAILURE_THRESHOLD = 2
+        private const val PRUNE_FAILURE_THRESHOLD = 3
 
         // Erst nach dem Laden der Notiz bedienbar. Werkzeuge und Menü sind immer aktiv; Platzhalter bleiben deaktiviert.
         private val CONTROL_IDS = intArrayOf(

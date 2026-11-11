@@ -1,11 +1,14 @@
 package local.papernotes.editor
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Rect
 import android.view.MotionEvent
@@ -183,6 +186,48 @@ class ImageAttachmentView(context: Context) : FrameLayout(context) {
                 part.compress(if (png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
                 part.recycle()
                 out.toByteArray() to (if (png) "png" else "jpg")
+            } catch (e: OutOfMemoryError) {
+                null
+            }
+        }
+
+        /**
+         * Stellt ein Foto mit EXIF-Orientation beim Import einmal aufrecht (das Modell kennt keine Drehung, und
+         * `BitmapFactory` wertet das Tag nicht aus). Ohne Drehung/Spiegelung kommen die Originalbytes unverändert
+         * zurück (kein Qualitätsverlust, kein Dekodieren). Sonst wird höchstens in [MAX_CROP_DIM] Bildpunkten
+         * Kantenlänge dekodiert, gedreht und neu kodiert (PNG bleibt PNG, sonst JPEG); das Tag fällt dabei weg, es wird
+         * also nicht doppelt gedreht. Null bei unlesbarem Bild oder zu wenig Speicher. Nicht im UI-Thread aufrufen.
+         *
+         * Bewusst die Framework-Klasse `android.media.ExifInterface` (keine neue Bibliothek, minSdk 29): Lint rät zur
+         * AndroidX-Fassung wegen Fehlern in alten Android-Versionen; hier wird nur das Orientation-Tag gelesen.
+         */
+        @SuppressLint("ExifInterface")
+        fun upright(bytes: ByteArray): ByteArray? {
+            val o = try {
+                val exif = android.media.ExifInterface(ByteArrayInputStream(bytes))
+                ImageUtil.orientationOf(
+                    exif.getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, android.media.ExifInterface.ORIENTATION_UNDEFINED),
+                )
+            } catch (e: java.io.IOException) {
+                ImageUtil.ORIENTATION_NONE
+            } catch (e: RuntimeException) {
+                ImageUtil.ORIENTATION_NONE
+            }
+            if (o.isIdentity) return bytes
+            val (w, h) = sizeOf(bytes) ?: return null
+            return try {
+                val opts = BitmapFactory.Options().apply { inSampleSize = ImageUtil.sampleSize(w, h, MAX_CROP_DIM) }
+                val full = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) ?: return null
+                val m = Matrix()
+                if (o.flipHorizontal) m.postScale(-1f, 1f)
+                m.postRotate(o.rotationDegrees.toFloat())
+                val turned = Bitmap.createBitmap(full, 0, 0, full.width, full.height, m, true)
+                if (turned !== full) full.recycle()
+                val png = ImageUtil.extensionOf(bytes) == "png"
+                val out = ByteArrayOutputStream()
+                turned.compress(if (png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+                turned.recycle()
+                out.toByteArray()
             } catch (e: OutOfMemoryError) {
                 null
             }

@@ -36,9 +36,9 @@ object SyncPaths {
         return "https://$host$port$path"
     }
 
-    /** Zielordner auf dem Server ("PaperNotes" oder "A/B"): Schrägstriche am Rand weg, Namen wie bei [FolderPath]; sonst null. */
+    /** Zielordner auf dem Server ("PaperNotes" oder "A/B"): Schrägstriche am Rand weg, nach NFC normalisiert, Namen wie bei [FolderPath]; sonst null. */
     fun normalizeTarget(input: String): String? {
-        val text = input.trim().trim('/')
+        val text = FolderPath.normalize(input).trim().trim('/')
         return text.takeIf { it.isNotEmpty() && FolderPath.isValid(it) }
     }
 

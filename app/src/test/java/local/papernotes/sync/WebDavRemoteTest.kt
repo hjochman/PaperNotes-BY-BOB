@@ -1,9 +1,11 @@
 package local.papernotes.sync
 
+import local.papernotes.storage.PnoteCodec
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -130,6 +132,61 @@ class WebDavRemoteTest {
         server.enqueue(status(204))
         remote.upload(LocalFile(a, "Neu Ordner", f.length(), f.lastModified()), f)
         assertEquals("$base/PaperNotes/Neu%20Ordner/$a.pnote", server.takeRequest().url.encodedPath)
+    }
+
+    @Test
+    fun uploadStreamsFileWithExactContentLengthAndChecksum() {
+        // Größer als der 8-KB-Puffer und die 64-KB-Segmente von okio, mit nicht komprimierbarem, nicht wiederholtem Inhalt.
+        val data = ByteArray(300_000).also { java.util.Random(7).nextBytes(it) }
+        val f = tmp.newFile("big.pnote").apply { writeBytes(data) }
+        server.enqueue(status(405)); server.enqueue(status(201))
+        remote.upload(LocalFile(a, "", f.length(), f.lastModified()), f)
+        server.takeRequest()
+        val put = server.takeRequest()
+        assertEquals("300000", put.headers["Content-Length"])
+        assertEquals(null, put.headers["Transfer-Encoding"])
+        assertEquals("application/octet-stream", put.headers["Content-Type"])
+        assertArrayEquals(data, put.body!!.toByteArray())
+        val sha1 = java.security.MessageDigest.getInstance("SHA-1").digest(data).joinToString("") { "%02x".format(it) }
+        assertEquals("SHA1:$sha1", put.headers["OC-Checksum"])
+    }
+
+    @Test
+    fun uploadOfEmptyFileSendsEmptyBody() {
+        val f = tmp.newFile("empty.pnote")
+        server.enqueue(status(405)); server.enqueue(status(201))
+        remote.upload(LocalFile(a, "", 0, f.lastModified()), f)
+        server.takeRequest()
+        val put = server.takeRequest()
+        assertEquals("0", put.headers["Content-Length"])
+        assertEquals(0, put.body!!.size)
+        assertEquals("SHA1:da39a3ee5e6b4b0d3255bfef95601890afd80709", put.headers["OC-Checksum"])
+    }
+
+    @Test
+    fun uploadOfMissingFileIsNetworkErrorAndSendsNoPut() {
+        val missing = File(tmp.root, "gibt-es-nicht.pnote")
+        server.enqueue(status(405)) // Zielordner
+        assertEquals(RemoteException.Kind.NETWORK, kind { remote.upload(LocalFile(a, "", 1, 0), missing) })
+        assertEquals(1, server.requestCount) // nur MKCOL
+    }
+
+    @Test
+    fun uploadOverPackageLimitIsRejectedWithoutAnyRequest() {
+        assertEquals(PnoteCodec.MAX_TOTAL_BYTES + 1024L * 1024, WebDavRemote.MAX_UPLOAD_BYTES)
+        // Sparse-Datei: belegt kaum Platz, meldet aber die Länge.
+        val big = tmp.newFile("huge.pnote").also { java.io.RandomAccessFile(it, "rw").use { raf -> raf.setLength(WebDavRemote.MAX_UPLOAD_BYTES + 1) } }
+        assertEquals(RemoteException.Kind.PROTOCOL, kind { remote.upload(LocalFile(a, "", big.length(), 0), big) })
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun uploadAtPackageLimitIsAccepted() {
+        val atLimit = tmp.newFile("limit.pnote").also { java.io.RandomAccessFile(it, "rw").use { raf -> raf.setLength(WebDavRemote.MAX_UPLOAD_BYTES) } }
+        server.enqueue(status(405)); server.enqueue(status(201))
+        remote.upload(LocalFile(a, "", atLimit.length(), 0), atLimit)
+        server.takeRequest()
+        assertEquals(WebDavRemote.MAX_UPLOAD_BYTES.toString(), server.takeRequest().headers["Content-Length"])
     }
 
     @Test

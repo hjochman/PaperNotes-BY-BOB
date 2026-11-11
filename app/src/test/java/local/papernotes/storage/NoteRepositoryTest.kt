@@ -683,4 +683,79 @@ class NoteRepositoryTest {
         assertEquals(PnoteError.LimitExceeded, repo.moveFolder("Quelle", deep).errorOrNull())
         assertTrue(File(root, "Quelle/Unter").isDirectory)
     }
+
+    // ---------------------------------------------------------------- H4: alte Datei lässt sich nicht löschen
+
+    @Test
+    fun saveKeepsNewFileAndReportsIoWhenOldFileCannotBeDeleted() {
+        val n = TestData.simpleNote("", "alt")
+        ok(repo.save(n))
+        repo.deleteFile = { throw java.nio.file.AccessDeniedException(it.path) }
+        val moved = repo.move(n.id, "Ziel")
+        assertEquals(PnoteError.Io, moved.errorOrNull())
+        // Nichts geht verloren: beide Dateien existieren, die neue gewinnt.
+        assertTrue(File(root, "${n.id}.pnote").isFile)
+        assertTrue(File(root, "Ziel/${n.id}.pnote").isFile)
+        assertEquals("Ziel", repo.load(n.id).valueOrNull()!!.folderPath)
+        assertEquals(File(root, "Ziel/${n.id}.pnote").canonicalFile, repo.noteFile(n.id)!!.canonicalFile)
+    }
+
+    @Test
+    fun nextSaveCleansUpDuplicateLeftByFailedDelete() {
+        val n = TestData.simpleNote("", "alt")
+        ok(repo.save(n))
+        repo.deleteFile = { throw java.nio.file.AccessDeniedException(it.path) }
+        assertEquals(PnoteError.Io, repo.move(n.id, "Ziel").errorOrNull())
+        repo.deleteFile = { java.nio.file.Files.delete(it.toPath()) }
+        ok(repo.setPinned(n.id, true))
+        assertFalse(File(root, "${n.id}.pnote").exists())
+        assertTrue(File(root, "Ziel/${n.id}.pnote").isFile)
+        assertTrue(repo.load(n.id).valueOrNull()!!.pinned)
+        assertEquals(1, repo.listAll("").valueOrNull()!!.size)
+    }
+
+    @Test
+    fun saveDeleteOfAlreadyMissingOldFileIsNotAnError() {
+        val n = TestData.simpleNote("", "alt")
+        ok(repo.save(n))
+        repo.deleteFile = { throw java.nio.file.NoSuchFileException(it.path) }
+        ok(repo.move(n.id, "Ziel"))
+        assertTrue(File(root, "Ziel/${n.id}.pnote").isFile)
+    }
+
+    @Test
+    fun saveWithUndeletableOldFileInReadOnlyFolderReportsIo() {
+        val n = TestData.simpleNote("", "alt")
+        ok(repo.save(n))
+        val oldDir = root // alte Datei liegt in der Wurzel; schreibgeschützt, damit sie sich nicht löschen lässt
+        repo.deleteFile = { java.nio.file.Files.delete(it.toPath()) }
+        // Zielordner vorab anlegen, bevor die Wurzel gesperrt wird.
+        ok(repo.createFolder("Ziel"))
+        oldDir.setWritable(false)
+        try {
+            // Läuft der Test mit Rechten, die den Schreibschutz ignorieren (z. B. root), ist er nicht aussagekräftig.
+            org.junit.Assume.assumeFalse("Dateisystem ignoriert Schreibschutz", java.nio.file.Files.isWritable(oldDir.toPath()))
+            val moved = repo.move(n.id, "Ziel")
+            assertEquals(PnoteError.Io, moved.errorOrNull())
+            assertTrue(File(root, "Ziel/${n.id}.pnote").isFile)
+            assertTrue(File(root, "${n.id}.pnote").isFile)
+        } finally {
+            oldDir.setWritable(true)
+        }
+    }
+
+    @Test
+    fun findFileWithDuplicateIdPicksNewestModifiedDeterministically() {
+        val n = TestData.simpleNote("", "alt")
+        ok(repo.save(n))
+        val oldFile = File(root, "${n.id}.pnote")
+        ok(repo.createFolder("Ziel"))
+        val newFile = File(root, "Ziel/${n.id}.pnote")
+        ok(PnoteCodec.write(n.copy(title = "neu", folderPath = "Ziel"), newFile))
+        assertTrue(oldFile.setLastModified(1_000_000L))
+        assertTrue(newFile.setLastModified(2_000_000L))
+        assertEquals("neu", repo.load(n.id).valueOrNull()!!.title)
+        assertTrue(oldFile.setLastModified(3_000_000L))
+        assertEquals("alt", repo.load(n.id).valueOrNull()!!.title)
+    }
 }

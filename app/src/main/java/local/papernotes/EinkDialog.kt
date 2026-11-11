@@ -241,6 +241,7 @@ internal object EinkDialog {
                 val icon = ImageView(activity).apply {
                     setImageResource(R.drawable.ic_check)
                     imageTintList = ColorStateList.valueOf(activity.getColor(R.color.black))
+                    contentDescription = activity.getString(R.string.sort_selected) // Zustand der Zeile für TalkBack
                 }
                 row.addView(icon, LinearLayout.LayoutParams(dp(24), dp(24)))
             }

@@ -244,6 +244,30 @@ class BackupStoreTest {
     }
 
     @Test
+    fun pruneFailureIsCountedButBackupStillSucceeds() {
+        val store = BackupStore(root)
+        val note = TestData.simpleNote()
+        val repo = NoteRepository(root)
+        assertTrue(repo.save(note) is PnoteResult.Ok)
+        val sourceFile = repo.noteFile(note.id)!!
+        val max = BackupStore.MAX_BACKUPS_PER_NOTE
+        for (i in 1..max) assertTrue(store.backup(note.id, sourceFile, timestamp = i * 1000L) is PnoteResult.Ok)
+        assertEquals(0, store.lastPruneFailures)
+
+        store.deleteFile = { throw java.nio.file.AccessDeniedException(it.path) }
+        val res = store.backup(note.id, sourceFile, timestamp = (max + 1) * 1000L)
+        assertTrue(res is PnoteResult.Ok) // die Sicherung selbst gelang
+        assertEquals(1, store.lastPruneFailures)
+        assertEquals(max + 1, store.list(note.id).size) // nichts verloren, Limit vorübergehend überschritten
+
+        // Beim nächsten Lauf mit funktionierendem Löschen wird nachgeholt und der Zähler zurückgesetzt.
+        store.deleteFile = { java.nio.file.Files.delete(it.toPath()) }
+        assertTrue(store.backup(note.id, sourceFile, timestamp = (max + 2) * 1000L) is PnoteResult.Ok)
+        assertEquals(0, store.lastPruneFailures)
+        assertEquals(max, store.list(note.id).size)
+    }
+
+    @Test
     fun deleteAllBackups() {
         val repo = NoteRepository(root)
         val store = BackupStore(root)

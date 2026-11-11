@@ -65,6 +65,38 @@ android {
     }
 }
 
+// Ein Release-APK/-Bundle ohne vollständige Signierung bricht ab, statt still unsigniert zu entstehen.
+// Debug-Builds, test, lint, lintRelease und lintVitalRelease bleiben unberührt (prüft nur den Task-Graphen).
+gradle.taskGraph.whenReady { graph ->
+    def producesReleaseArtifact = ['assembleRelease', 'bundleRelease', 'packageRelease'].any {
+        graph.hasTask("${project.path}:${it}")
+    }
+    def releaseSigning = android.signingConfigs.getByName('release')
+    if (producesReleaseArtifact && (releaseSigning.storeFile == null || !releaseSigning.storeFile.exists())) {
+        def missing = []
+        if (!keystorePropertiesFile.exists()) {
+            missing << 'keystore.properties im Projektwurzelverzeichnis fehlt'
+        } else {
+            ['PAPYRUS_STORE_PASSWORD', 'PAPYRUS_KEY_ALIAS', 'PAPYRUS_KEY_PASSWORD'].each {
+                if (!keystoreProperties.getProperty(it)) {
+                    missing << "Eintrag ${it} in keystore.properties fehlt"
+                }
+            }
+            def storeFileProp = keystoreProperties.getProperty('storeFile')
+            def ksFile = storeFileProp ? rootProject.file(storeFileProp) : rootProject.file('patch-key.jks')
+            if (!ksFile.exists()) {
+                missing << "Keystore-Datei ${ksFile.name} fehlt"
+            }
+        }
+        throw new GradleException(
+            'Release-Build abgebrochen: Die Signierung ist nicht vollständig konfiguriert ('
+            + missing.join('; ')
+            + '). Ein unsigniertes Release-APK wird nicht erzeugt. Abhilfe: keystore.properties mit '
+            + 'PAPYRUS_STORE_PASSWORD, PAPYRUS_KEY_ALIAS und PAPYRUS_KEY_PASSWORD sowie patch-key.jks '
+            + '(oder storeFile=<Pfad>) im Projektwurzelverzeichnis ablegen, siehe AGENT.md, Abschnitt "Signieren".')
+    }
+}
+
 dependencies {
     implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'com.google.code.gson:gson:2.12.1'

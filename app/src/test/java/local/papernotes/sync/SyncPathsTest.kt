@@ -30,6 +30,20 @@ class SyncPathsTest {
     }
 
     @Test
+    fun targetIsNormalizedToNfcSoBothSpellingsGiveTheSameServerPath() {
+        val nfc = "B\u00FCro/Notizen"
+        val nfd = "Bu\u0308ro/Notizen"
+        assertEquals(nfc, SyncPaths.normalizeTarget(nfc))
+        assertEquals(nfc, SyncPaths.normalizeTarget(nfd))
+        assertEquals(nfc, SyncPaths.normalizeTarget(SyncPaths.normalizeTarget(nfd)!!))
+        assertEquals(SyncPaths.encodePath(nfc), SyncPaths.encodePath(SyncPaths.normalizeTarget(nfd)!!))
+        assertEquals("B%C3%BCro/Notizen", SyncPaths.encodePath(SyncPaths.normalizeTarget(nfd)!!))
+        // ungültig bleibt ungültig
+        assertNull(SyncPaths.normalizeTarget("Bu\u0308ro/../x"))
+        assertNull(SyncPaths.normalizeTarget("\u0308"))
+    }
+
+    @Test
     fun encodesSegmentsForWebDav() {
         assertEquals("Open%20Shift", SyncPaths.encodeSegment("Open Shift"))
         assertEquals("B%C3%BCro", SyncPaths.encodeSegment("Büro"))

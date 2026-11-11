@@ -360,7 +360,13 @@ internal class HomeTiles(
         setBackgroundColor(context.getColor(R.color.white))
         setPadding(dp(2f), dp(2f), dp(4f), dp(2f))
         contentDescription = context.getString(R.string.audio_badge_desc, count)
-        addView(ImageView(context).apply { setImageResource(R.drawable.ic_speaker) }, LinearLayout.LayoutParams(dp(22f), dp(22f)))
+        addView(
+            ImageView(context).apply {
+                setImageResource(R.drawable.ic_speaker)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO // der Container beschreibt das Abzeichen
+            },
+            LinearLayout.LayoutParams(dp(22f), dp(22f)),
+        )
         addView(
             text(14f, black, 1).apply { this.text = context.getString(R.string.audio_count, count) },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT),

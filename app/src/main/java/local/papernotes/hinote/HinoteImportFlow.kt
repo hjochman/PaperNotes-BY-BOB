@@ -59,6 +59,7 @@ internal class HinoteImportFlow(private val activity: Activity, private val repo
         start { scanFolder() }
     }
 
+    /** Bricht einen laufenden Import ab und schließt den Fortschrittsdialog (aufgerufen in `onDestroy` der Startseite). */
     fun cancel() {
         running?.let {
             it.cancelled.set(true)
@@ -90,25 +91,33 @@ internal class HinoteImportFlow(private val activity: Activity, private val repo
         running = Running(cancelled, progress)
         val executor = Executors.newSingleThreadExecutor()
         executor.execute {
-            var empty = false
-            val report = try {
-                val list = sources()
-                empty = list.isEmpty()
-                if (empty) null else HinoteImportRunner.run(
-                    list, r, activity.getString(R.string.new_note_title),
-                    isCancelled = { cancelled.get() },
-                    onProgress = { done, total ->
-                        val text = activity.getString(R.string.export_progress_note, done, total)
-                        activity.runOnUiThread { if (!cancelled.get()) progress.setText(text) }
-                    },
-                )
-            } catch (e: RuntimeException) {
-                null
-            } catch (e: java.io.IOException) {
-                null
+            try {
+                var empty = false
+                // Abbruch wirkt nur zwischen den Notizen (Runner prüft vor jeder Notiz); ein begonnenes `repo.save`
+                // schreibt atomar zu Ende. OutOfMemoryError (große Container im Speicher) wie ein Fehlschlag behandeln,
+                // damit der Dialog nicht offen bleibt.
+                val report = try {
+                    val list = sources()
+                    empty = list.isEmpty()
+                    if (empty) null else HinoteImportRunner.run(
+                        list, r, activity.getString(R.string.new_note_title),
+                        isCancelled = { cancelled.get() },
+                        onProgress = { done, total ->
+                            val text = activity.getString(R.string.export_progress_note, done, total)
+                            activity.runOnUiThread { if (!cancelled.get()) progress.setText(text) }
+                        },
+                    )
+                } catch (e: RuntimeException) {
+                    null
+                } catch (e: java.io.IOException) {
+                    null
+                } catch (e: OutOfMemoryError) {
+                    null
+                }
+                finishWith(report, empty, progress, cancelled)
+            } finally {
+                executor.shutdown()
             }
-            finishWith(report, empty, progress, cancelled)
-            executor.shutdown()
         }
     }
 

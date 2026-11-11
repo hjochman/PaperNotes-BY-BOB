@@ -27,7 +27,10 @@ class PnoteParseException extends Exception {
  */
 class PnoteParserService {
 	public const int FORMAT_VERSION = 2;
+	/** Smallest readable version; version 1 (view pixels instead of page coordinates) was never shipped. */
+	public const int MIN_VERSION = 2;
 	public const int MAX_TOTAL_BYTES = 67108864; // 64 MB
+	public const int MAX_FILE_BYTES = 68157440; // 64 MB uncompressed content + 1 MB ZIP overhead
 	public const int MAX_ENTRY_BYTES = 16777216; // 16 MB
 	public const int MAX_PREVIEW_BYTES = 2097152; // 2 MB
 	public const int MAX_ENTRIES = 2000;
@@ -251,6 +254,13 @@ class PnoteParserService {
 	}
 
 	/**
+	 * Checks whether the size of a whole .pnote file is plausible, before it is copied anywhere.
+	 */
+	public function isAcceptableFileSize(int $bytes): bool {
+		return $bytes > 0 && $bytes <= self::MAX_FILE_BYTES;
+	}
+
+	/**
 	 * Checks a media file name as stored in pages (<uuid>.<ext>, no path).
 	 */
 	public function isValidMediaFile(string $name): bool {
@@ -288,11 +298,11 @@ class PnoteParserService {
 			$isDir = str_ends_with($name, '/');
 
 			if (!$this->isAllowedEntryName($name, $isDir)) {
-				throw new PnoteParseException('Invalid or prohibited ZIP entry name: ' . $name);
+				throw new PnoteParseException('Invalid or prohibited ZIP entry name');
 			}
 
 			if (isset($seenEntries[$name])) {
-				throw new PnoteParseException('Duplicate entry name in ZIP: ' . $name);
+				throw new PnoteParseException('Duplicate entry name in ZIP');
 			}
 			$seenEntries[$name] = true;
 
@@ -303,12 +313,12 @@ class PnoteParserService {
 			// Pre-check uncompressed size from header if available
 			$entrySize = $stat['size'];
 			if ($entrySize > self::MAX_ENTRY_BYTES) {
-				throw new PnoteParseException('ZIP entry exceeds maximum size: ' . $name);
+				throw new PnoteParseException('ZIP entry exceeds maximum size');
 			}
 
 			$stream = $zip->getStream($name);
 			if (!$stream) {
-				throw new PnoteParseException('Failed to open stream for entry: ' . $name);
+				throw new PnoteParseException('Failed to open stream for ZIP entry');
 			}
 
 			// Read with strict byte limit
@@ -322,12 +332,12 @@ class PnoteParserService {
 			fclose($stream);
 
 			if ($content === false) {
-				throw new PnoteParseException('Error reading entry content: ' . $name);
+				throw new PnoteParseException('Error reading ZIP entry content');
 			}
 
 			$readLen = strlen($content);
 			if ($readLen > $limit) {
-				throw new PnoteParseException('Entry exceeded size limit during reading: ' . $name);
+				throw new PnoteParseException('ZIP entry exceeded size limit during reading');
 			}
 
 			$totalUncompressedBytes += $readLen;
@@ -370,9 +380,9 @@ class PnoteParserService {
 		$pages = [];
 		foreach ($manifest['pageIds'] as $pageId) {
 			if (!isset($pageFiles[$pageId])) {
-				throw new PnoteParseException("Page file missing for page ID: pages/{$pageId}.json");
+				throw new PnoteParseException('Page file missing for a page listed in the manifest');
 			}
-			$pages[$pageId] = $this->parsePage($pageId, $pageFiles[$pageId], $manifest['version']);
+			$pages[$pageId] = $this->parsePage($pageId, $pageFiles[$pageId]);
 		}
 
 		$result = [
@@ -395,7 +405,11 @@ class PnoteParserService {
 	 * @throws PnoteParseException
 	 */
 	public function parseManifest(string $json): array {
-		$data = json_decode($json, true, 32, JSON_THROW_ON_ERROR & 0);
+		try {
+			$data = json_decode($json, true, 32, JSON_THROW_ON_ERROR);
+		} catch (\JsonException) {
+			throw new PnoteParseException('Corrupt manifest.json: invalid JSON');
+		}
 		if (!is_array($data)) {
 			throw new PnoteParseException('Corrupt manifest.json: not a JSON object');
 		}
@@ -405,8 +419,8 @@ class PnoteParserService {
 		}
 
 		$version = $data['version'];
-		if ($version < 1) {
-			throw new PnoteParseException('Corrupt manifest: version must be >= 1');
+		if ($version < self::MIN_VERSION) {
+			throw new PnoteParseException('Corrupt manifest: version must be >= ' . self::MIN_VERSION);
 		}
 		if ($version > self::FORMAT_VERSION) {
 			throw new PnoteParseException("Unsupported format version {$version} (highest supported is " . self::FORMAT_VERSION . ')');
@@ -449,10 +463,10 @@ class PnoteParserService {
 		$validatedPageIds = [];
 		foreach ($data['pageIds'] as $pageId) {
 			if (!is_string($pageId) || !$this->isValidUuid($pageId)) {
-				throw new PnoteParseException('Corrupt manifest: invalid page UUID: ' . (string)$pageId);
+				throw new PnoteParseException('Corrupt manifest: invalid page UUID');
 			}
 			if (isset($seenPageIds[$pageId])) {
-				throw new PnoteParseException('Corrupt manifest: duplicate page UUID: ' . $pageId);
+				throw new PnoteParseException('Corrupt manifest: duplicate page UUID');
 			}
 			$seenPageIds[$pageId] = true;
 			$validatedPageIds[] = $pageId;
@@ -477,14 +491,17 @@ class PnoteParserService {
 	 *
 	 * @param string $pageId
 	 * @param string $json
-	 * @param int $manifestVersion
 	 * @return array<string, mixed>
 	 * @throws PnoteParseException
 	 */
-	public function parsePage(string $pageId, string $json, int $manifestVersion): array {
-		$data = json_decode($json, true, 32, JSON_THROW_ON_ERROR & 0);
+	public function parsePage(string $pageId, string $json): array {
+		try {
+			$data = json_decode($json, true, 32, JSON_THROW_ON_ERROR);
+		} catch (\JsonException) {
+			throw new PnoteParseException('Corrupt page JSON: invalid JSON');
+		}
 		if (!is_array($data)) {
-			throw new PnoteParseException("Corrupt page JSON for page {$pageId}");
+			throw new PnoteParseException('Corrupt page JSON: not a JSON object');
 		}
 
 		$template = $data['template'] ?? 'blank';
@@ -496,18 +513,18 @@ class PnoteParserService {
 		$height = isset($data['height']) && is_numeric($data['height']) ? (int)$data['height'] : 1872;
 
 		if ($width < 1 || $width > self::MAX_PAGE_DIMENSION || $height < 1 || $height > self::MAX_PAGE_DIMENSION) {
-			throw new PnoteParseException("Invalid page dimensions for page {$pageId}: {$width}x{$height}");
+			throw new PnoteParseException("Invalid page dimensions on page: {$width}x{$height}");
 		}
 
 		$bookmarked = !empty($data['bookmarked']);
 
 		$rawStrokes = $data['strokes'] ?? [];
 		if (!is_array($rawStrokes)) {
-			throw new PnoteParseException("Corrupt strokes array in page {$pageId}");
+			throw new PnoteParseException('Corrupt strokes array on page');
 		}
 
 		if (count($rawStrokes) > self::MAX_STROKES_PER_PAGE) {
-			throw new PnoteParseException("Exceeded max strokes per page limit on page {$pageId}");
+			throw new PnoteParseException('Exceeded max strokes per page limit on page');
 		}
 
 		$strokes = [];
@@ -530,7 +547,7 @@ class PnoteParserService {
 			}
 
 			if (count($rawPoints) > self::MAX_POINTS_PER_STROKE) {
-				throw new PnoteParseException("Exceeded max points per stroke limit on page {$pageId}");
+				throw new PnoteParseException('Exceeded max points per stroke limit on page');
 			}
 
 			$points = [];
@@ -588,7 +605,7 @@ class PnoteParserService {
 			return [];
 		}
 		if (count($raw) > self::MAX_TEXTBOXES_PER_PAGE) {
-			throw new PnoteParseException("Exceeded max textboxes per page limit on page {$pageId}");
+			throw new PnoteParseException('Exceeded max textboxes per page limit on page');
 		}
 
 		$out = [];
@@ -599,7 +616,7 @@ class PnoteParserService {
 			$text = isset($t['text']) && is_string($t['text']) ? $t['text'] : '';
 			$units = $this->utf16Length($text);
 			if ($units > self::MAX_TEXT_UNITS) {
-				throw new PnoteParseException("Textbox text too long on page {$pageId}");
+				throw new PnoteParseException('Textbox text too long on page');
 			}
 
 			$x = $this->finiteFloat($t['x'] ?? 0);
@@ -617,7 +634,7 @@ class PnoteParserService {
 			$rawSpans = $t['spans'] ?? [];
 			if (is_array($rawSpans)) {
 				if (count($rawSpans) > self::MAX_RICH_ENTRIES) {
-					throw new PnoteParseException("Too many text spans on page {$pageId}");
+					throw new PnoteParseException('Too many text spans on page');
 				}
 				foreach ($rawSpans as $sp) {
 					if (!is_array($sp) || count($sp) < 4 || !is_numeric($sp[0]) || !is_numeric($sp[1]) || !is_numeric($sp[2]) || !is_numeric($sp[3])) {
@@ -637,7 +654,7 @@ class PnoteParserService {
 			$rawParas = $t['paras'] ?? [];
 			if (is_array($rawParas)) {
 				if (count($rawParas) > self::MAX_RICH_ENTRIES) {
-					throw new PnoteParseException("Too many paragraph formats on page {$pageId}");
+					throw new PnoteParseException('Too many paragraph formats on page');
 				}
 				foreach ($rawParas as $pf) {
 					if (!is_array($pf) || count($pf) < 4 || !is_numeric($pf[0]) || !is_numeric($pf[1]) || !is_numeric($pf[2]) || !is_numeric($pf[3])) {
@@ -683,7 +700,7 @@ class PnoteParserService {
 			return [];
 		}
 		if (count($raw) > self::MAX_IMAGES_PER_PAGE) {
-			throw new PnoteParseException("Exceeded max images per page limit on page {$pageId}");
+			throw new PnoteParseException('Exceeded max images per page limit on page');
 		}
 
 		$out = [];
@@ -717,7 +734,7 @@ class PnoteParserService {
 			return [];
 		}
 		if (count($raw) > self::MAX_AUDIOS_PER_PAGE) {
-			throw new PnoteParseException("Exceeded max audios per page limit on page {$pageId}");
+			throw new PnoteParseException('Exceeded max audios per page limit on page');
 		}
 
 		$out = [];

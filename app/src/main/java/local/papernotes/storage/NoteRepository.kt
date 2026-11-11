@@ -46,6 +46,9 @@ class NoteRepository(rootDir: File, private val clock: () -> Long = System::curr
     private val trashDir: File = File(root, TRASH_DIR)
     private val lock = Any()
 
+    /** Löscht eine überholte Notizdatei nach einem Ordnerwechsel. Wirft [IOException] bei Fehlschlag; Naht für Tests. */
+    internal var deleteFile: (File) -> Unit = { Files.delete(it.toPath()) }
+
     // ---------------------------------------------------------------- Lesen
 
     fun list(folderPath: String): PnoteResult<List<NoteSummary>> = synchronized(lock) {
@@ -123,11 +126,18 @@ class NoteRepository(rootDir: File, private val clock: () -> Long = System::curr
 
     // ---------------------------------------------------------------- Schreiben
 
-    /** Speichert [note] unter `note.folderPath`; war sie vorher in einem anderen Ordner, wird die alte Datei entfernt. */
+    /**
+     * Speichert [note] unter `note.folderPath`; war sie vorher in einem anderen Ordner, wird die alte Datei entfernt.
+     *
+     * Die neue Datei wird zuerst geschrieben und bleibt in jedem Fall erhalten. Lässt sich eine alte Datei danach nicht
+     * löschen, liefert [save] [PnoteError.Io] (die Notiz ist gespeichert, aber der Ordnerwechsel nicht sauber beendet).
+     * Die neue Datei trägt dann die jüngere Änderungszeit und gewinnt in [findFile]; das nächste [save] derselben Notiz
+     * räumt die Dublette erneut auf. Alte Dubletten aus früheren Fehlschlägen werden bei jedem Speichern mit entfernt.
+     */
     fun save(note: Note): PnoteResult<Unit> = synchronized(lock) {
         if (!PnoteCodec.isValidId(note.id)) return PnoteResult.Err(PnoteError.InvalidId)
         val dir = resolveFolder(note.folderPath) ?: return PnoteResult.Err(PnoteError.InvalidFolder)
-        val old = findFile(note.id)
+        val existing = findAll(note.id)
         try {
             Files.createDirectories(dir.toPath())
         } catch (e: IOException) {
@@ -135,8 +145,22 @@ class NoteRepository(rootDir: File, private val clock: () -> Long = System::curr
         }
         val target = File(dir, fileName(note.id))
         val r = PnoteCodec.write(note, target)
-        if (r is PnoteResult.Ok && old != null && old.canonicalFile != target.canonicalFile) old.delete()
-        r
+        if (r !is PnoteResult.Ok) return r
+        val targetCanonical = target.canonicalFile
+        var failed = false
+        for (old in existing) {
+            if (old.canonicalFile == targetCanonical) continue
+            try {
+                deleteFile(old)
+            } catch (e: NoSuchFileException) {
+                // schon weg: nichts zu tun
+            } catch (e: IOException) {
+                failed = true
+                // Die neue Datei muss die jüngere sein, damit findFile sie wählt (bei gleicher Millisekunde sonst Zufall).
+                if (target.lastModified() <= old.lastModified()) target.setLastModified(old.lastModified() + 1)
+            }
+        }
+        if (failed) PnoteResult.Err(PnoteError.Io) else r
     }
 
     /** Verschiebt die Notiz in den Papierkorb `.trash/` (kein endgültiges Löschen). */
@@ -445,16 +469,26 @@ class NoteRepository(rootDir: File, private val clock: () -> Long = System::curr
         return noteFiles(dir) + visibleSubdirs(dir).flatMap { allNoteFiles(it, depth + 1) }
     }
 
-    private fun findFile(id: String): File? {
+    /**
+     * Datei der Notiz [id]. Liegt dieselbe ID durch einen früheren Fehlschlag beim Löschen mehrfach vor, gewinnt die Datei
+     * mit der jüngsten Änderungszeit, bei Gleichstand der kleinere Pfad (wie `LocalScanner`); das Ergebnis hängt damit
+     * nicht von der Lesereihenfolge des Dateisystems ab.
+     */
+    private fun findFile(id: String): File? =
+        findAll(id).maxWithOrNull(compareBy<File> { it.lastModified() }.thenByDescending { it.path })
+
+    /** Alle Dateien `<id>.pnote` unterhalb der Wurzel (ohne `.trash`, `.backup` und Symlinks), normalerweise genau eine. */
+    private fun findAll(id: String): List<File> {
         val name = fileName(id)
-        fun search(dir: File, depth: Int): File? {
-            if (depth > MAX_DEPTH) return null
+        val found = ArrayList<File>(1)
+        fun search(dir: File, depth: Int) {
+            if (depth > MAX_DEPTH) return
             val candidate = File(dir, name)
-            if (candidate.isFile && !Files.isSymbolicLink(candidate.toPath())) return candidate
-            for (sub in visibleSubdirs(dir)) search(sub, depth + 1)?.let { return it }
-            return null
+            if (candidate.isFile && !Files.isSymbolicLink(candidate.toPath())) found.add(candidate)
+            for (sub in visibleSubdirs(dir)) search(sub, depth + 1)
         }
-        return search(root, 0)
+        search(root, 0)
+        return found
     }
 
     private inline fun io(block: () -> Unit): PnoteResult<Unit> = try {

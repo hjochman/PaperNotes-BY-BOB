@@ -956,7 +956,7 @@ class MainActivity : Activity() {
             initial = "",
             maxLen = FolderPath.MAX_SEGMENT_LENGTH,
             errorRes = R.string.error_folder_name_invalid,
-            normalize = { it.trim() },
+            normalize = { FolderPath.normalize(it).trim() },
             isValid = { FolderPath.isValidName(it) },
         ) { name ->
             val path = if (parent.isEmpty()) name else "$parent/$name"
@@ -970,7 +970,7 @@ class MainActivity : Activity() {
             initial = folder.name,
             maxLen = FolderPath.MAX_SEGMENT_LENGTH,
             errorRes = R.string.error_folder_name_invalid,
-            normalize = { it.trim() },
+            normalize = { FolderPath.normalize(it).trim() },
             isValid = { FolderPath.isValidName(it) },
         ) { name ->
             if (name != folder.name) runRepo(onError = ::folderError) { it.renameFolder(folder.path, name) }

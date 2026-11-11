@@ -94,6 +94,89 @@
         }
     };
 
+    // Texts of the viewer UI. Every key must exist in both languages (checked by tests/run_tests.php).
+    // {name} placeholders are replaced by tr(); the result is plain text, never markup.
+    const VIEWER_TEXTS = {
+        de: {
+            defaultTitle: 'Notiz',
+            audioDefault: 'Aufnahme',
+            loading: 'Notiz wird geladen ...',
+            errNotFound: 'Die Notiz wurde nicht gefunden oder du hast keinen Zugriff darauf.',
+            errDenied: 'Du darfst diese Notiz nicht öffnen.',
+            errMalformed: 'Die Notizdatei ist beschädigt oder hat ein nicht unterstütztes Format.',
+            errGeneric: 'Die Notiz konnte nicht geladen werden.',
+            close: 'Schließen',
+            closeTitle: 'Schließen (Esc)',
+            prevPage: 'Vorherige Seite (Pfeil links)',
+            nextPage: 'Nächste Seite (Pfeil rechts)',
+            pageIndicator: 'Seite {page} / {total}',
+            zoomOut: 'Verkleinern (-)',
+            zoomIn: 'Vergrößern (+)',
+            fit: 'Anpassen',
+            fitTitle: 'An Fenster anpassen',
+            pdfTitle: 'Als PDF herunterladen',
+            pdfButton: 'PDF herunterladen',
+            pagesHeader: 'Seiten ({total})',
+            thumbTitle: 'Seite {page}',
+            pdfAudioConfirm: 'Die Notiz enthält Aufnahmen.\n\nSollen sie als Anhänge an den Seiten des PDFs eingebettet werden?\n\nOK = mit Anhängen, Abbrechen = nur das PDF'
+        },
+        en: {
+            defaultTitle: 'Note',
+            audioDefault: 'Recording',
+            loading: 'Loading note ...',
+            errNotFound: 'The note was not found or you do not have access to it.',
+            errDenied: 'You are not allowed to open this note.',
+            errMalformed: 'The note file is damaged or has an unsupported format.',
+            errGeneric: 'The note could not be loaded.',
+            close: 'Close',
+            closeTitle: 'Close (Esc)',
+            prevPage: 'Previous page (left arrow)',
+            nextPage: 'Next page (right arrow)',
+            pageIndicator: 'Page {page} / {total}',
+            zoomOut: 'Zoom out (-)',
+            zoomIn: 'Zoom in (+)',
+            fit: 'Fit',
+            fitTitle: 'Fit to window',
+            pdfTitle: 'Download as PDF',
+            pdfButton: 'Download PDF',
+            pagesHeader: 'Pages ({total})',
+            thumbTitle: 'Page {page}',
+            pdfAudioConfirm: 'This note contains recordings.\n\nDo you want to embed them as attachments on the pages of the PDF?\n\nOK = with attachments, Cancel = PDF only'
+        }
+    };
+
+    /** UI language: German for German Nextcloud users, English for everyone else. */
+    function currentLang() {
+        let code = '';
+        try {
+            if (window.OC && typeof window.OC.getLanguage === 'function') {
+                code = window.OC.getLanguage() || '';
+            }
+        } catch (e) {}
+        if (!code) code = document.documentElement.lang || '';
+        return String(code).substring(0, 2).toLowerCase() === 'de' ? 'de' : 'en';
+    }
+
+    /** Returns the text for a key in the UI language (English if missing). Plain text, to be escaped for HTML. */
+    function tr(key, vars) {
+        const table = VIEWER_TEXTS[currentLang()];
+        let text = (table && table[key]) || VIEWER_TEXTS.en[key] || key;
+        if (vars) {
+            text = text.replace(/\{(\w+)\}/g, (m, name) => (name in vars ? String(vars[name]) : m));
+        }
+        return text;
+    }
+
+    /** Maps the HTTP status of a failed note request to a fixed, translated message (server texts are never shown). */
+    function loadErrorText(status) {
+        switch (status) {
+            case 404: return tr('errNotFound');
+            case 403: return tr('errDenied');
+            case 422: return tr('errMalformed');
+            default: return tr('errGeneric');
+        }
+    }
+
     /**
      * Converts a 32-bit ARGB signed integer into an rgba() CSS string.
      */
@@ -521,7 +604,7 @@
     }
 
     function audioLabel(audio) {
-        const name = String(audio.title || '').trim() || 'Audio';
+        const name = String(audio.title || '').trim() || tr('audioDefault');
         return audio.duration > 0 ? `${name} (${formatTime(audio.duration)})` : name;
     }
 
@@ -739,8 +822,8 @@
         const opt = options || {};
         const width = page.width || 1404;
         const height = page.height || 1872;
-        const lang = opt.lang || 'de';
-        const labelsDict = TEMPLATE_LABELS[lang] || TEMPLATE_LABELS.de;
+        const lang = opt.lang || 'en';
+        const labelsDict = TEMPLATE_LABELS[lang] || TEMPLATE_LABELS.en;
 
         // Background: Solid white
         ctx.fillStyle = '#FFFFFF';
@@ -873,7 +956,7 @@
             this.modalEl = null;
             this.canvasEl = null;
             this.ctx = null;
-            this.lang = (document.documentElement.lang || 'de').substring(0, 2);
+            this.lang = currentLang();
             this.imageCache = {};
             this.refreshQueued = false;
 
@@ -903,17 +986,21 @@
 
             fetch(url, { headers, credentials: 'same-origin' })
                 .then(res => {
-                    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                    if (!res.ok) {
+                        const failure = new Error('HTTP error');
+                        failure.status = res.status;
+                        throw failure;
+                    }
                     return res.json();
                 })
                 .then(json => {
                     if (json.status !== 'success' || !json.data) {
-                        throw new Error(json.message || 'Invalid server response');
+                        throw new Error('Invalid server response');
                     }
                     this.initViewer(json.data);
                 })
                 .catch(err => {
-                    this.showError(`Fehler beim Laden der Notiz: ${err.message}`);
+                    this.showError(loadErrorText(err && err.status));
                 });
         }
 
@@ -969,9 +1056,10 @@
             modal.innerHTML = `
                 <div class="papernotes-loading-box">
                     <div class="papernotes-spinner"></div>
-                    <div class="papernotes-loading-text">PaperNotes Notiz wird geladen...</div>
+                    <div class="papernotes-loading-text"></div>
                 </div>
             `;
+            modal.querySelector('.papernotes-loading-text').textContent = tr('loading');
             document.body.appendChild(modal);
             this.modalEl = modal;
         }
@@ -986,10 +1074,13 @@
             this.modalEl.innerHTML = `
                 <div class="papernotes-error-box">
                     <div class="papernotes-error-icon">⚠️</div>
-                    <div class="papernotes-error-message">${message}</div>
-                    <button class="papernotes-btn papernotes-btn-primary" id="papernotes-btn-close-err">Schließen</button>
+                    <div class="papernotes-error-message"></div>
+                    <button class="papernotes-btn papernotes-btn-primary" id="papernotes-btn-close-err"></button>
                 </div>
             `;
+            // Texts are set as plain text, never interpreted as HTML.
+            this.modalEl.querySelector('.papernotes-error-message').textContent = String(message);
+            this.modalEl.querySelector('#papernotes-btn-close-err').textContent = tr('close');
             document.getElementById('papernotes-btn-close-err').addEventListener('click', () => this.close());
         }
 
@@ -998,7 +1089,7 @@
                 this.modalEl.remove();
             }
 
-            const title = (this.note.manifest && this.note.manifest.title) ? this.note.manifest.title : 'Notiz';
+            const title = (this.note.manifest && this.note.manifest.title) ? this.note.manifest.title : tr('defaultTitle');
             const pageIds = (this.note.manifest && this.note.manifest.pageIds) ? this.note.manifest.pageIds : Object.keys(this.note.pages || {});
             const totalPages = pageIds.length;
             const hasAudio = pageIds.some(id => ((this.note.pages || {})[id]?.audios || []).length > 0);
@@ -1016,25 +1107,25 @@
                         </div>
                     </div>
                     <div class="papernotes-header-center">
-                        <button class="papernotes-btn-icon" id="pn-btn-prev" title="Vorherige Seite (Pfeil links)">◀</button>
-                        <span class="papernotes-page-indicator" id="pn-page-indicator">Seite 1 / ${totalPages}</span>
-                        <button class="papernotes-btn-icon" id="pn-btn-next" title="Nächste Seite (Pfeil rechts)">▶</button>
+                        <button class="papernotes-btn-icon" id="pn-btn-prev" title="${this.escapeHtml(tr('prevPage'))}">◀</button>
+                        <span class="papernotes-page-indicator" id="pn-page-indicator">${this.escapeHtml(tr('pageIndicator', { page: 1, total: totalPages }))}</span>
+                        <button class="papernotes-btn-icon" id="pn-btn-next" title="${this.escapeHtml(tr('nextPage'))}">▶</button>
                     </div>
                     <div class="papernotes-header-right">
-                        <button class="papernotes-btn-icon" id="pn-btn-zoom-out" title="Verkleinern (-)">−</button>
+                        <button class="papernotes-btn-icon" id="pn-btn-zoom-out" title="${this.escapeHtml(tr('zoomOut'))}">−</button>
                         <span class="papernotes-zoom-text" id="pn-zoom-text">100%</span>
-                        <button class="papernotes-btn-icon" id="pn-btn-zoom-in" title="Vergrößern (+)">+</button>
-                        <button class="papernotes-btn" id="pn-btn-fit" title="An Fenster anpassen">Fit</button>
-                        <button class="papernotes-btn papernotes-btn-pdf" id="pn-btn-pdf" title="Als PDF herunterladen">
-                            <span class="pn-pdf-icon">📄</span> PDF Download
+                        <button class="papernotes-btn-icon" id="pn-btn-zoom-in" title="${this.escapeHtml(tr('zoomIn'))}">+</button>
+                        <button class="papernotes-btn" id="pn-btn-fit" title="${this.escapeHtml(tr('fitTitle'))}">${this.escapeHtml(tr('fit'))}</button>
+                        <button class="papernotes-btn papernotes-btn-pdf" id="pn-btn-pdf" title="${this.escapeHtml(tr('pdfTitle'))}">
+                            <span class="pn-pdf-icon">📄</span> ${this.escapeHtml(tr('pdfButton'))}
                         </button>
-                        <button class="papernotes-btn-icon papernotes-btn-close" id="pn-btn-close" title="Schließen (Esc)">✕</button>
+                        <button class="papernotes-btn-icon papernotes-btn-close" id="pn-btn-close" title="${this.escapeHtml(tr('closeTitle'))}">✕</button>
                     </div>
                 </div>
                 <div class="papernotes-body">
                     <div class="papernotes-sidebar" id="pn-sidebar">
                         <div class="papernotes-sidebar-header">
-                            <span>Seiten (${totalPages})</span>
+                            <span>${this.escapeHtml(tr('pagesHeader', { total: totalPages }))}</span>
                         </div>
                         <div class="papernotes-thumbnails" id="pn-thumbnails"></div>
                     </div>
@@ -1135,7 +1226,7 @@
             // Update UI page indicator
             const indicator = document.getElementById('pn-page-indicator');
             if (indicator) {
-                indicator.textContent = `Seite ${this.currentPageIndex + 1} / ${pageIds.length}`;
+                indicator.textContent = tr('pageIndicator', { page: this.currentPageIndex + 1, total: pageIds.length });
             }
 
             // Update zoom text
@@ -1200,7 +1291,7 @@
 
                 const card = document.createElement('div');
                 card.className = `papernotes-thumb-card ${index === this.currentPageIndex ? 'active' : ''}`;
-                card.title = `Seite ${index + 1}`;
+                card.title = tr('thumbTitle', { page: index + 1 });
 
                 const thumbCanvas = document.createElement('canvas');
                 const tw = 120;
@@ -1273,9 +1364,7 @@
 
         /** Notes with recordings ask whether the recordings should be attached to the PDF pages. */
         onPdfClick(hasAudio) {
-            const withAudio = hasAudio && window.confirm(
-                'Die Notiz enthält Aufnahmen.\n\nSollen sie als Anhänge an den Seiten des PDFs eingebettet werden?\n\nOK = mit Anhängen, Abbrechen = nur das PDF'
-            );
+            const withAudio = hasAudio && window.confirm(tr('pdfAudioConfirm'));
             this.downloadPdf(withAudio);
         }
 

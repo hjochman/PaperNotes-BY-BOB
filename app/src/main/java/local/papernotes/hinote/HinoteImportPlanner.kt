@@ -12,7 +12,8 @@ class ScannedFile(val file: File, val relativeDir: String, val lastModified: Lon
  *
  * - **Zielordner:** Das Unterverzeichnis relativ zur Scanwurzel wird Ordnerpfad unterhalb von [HinoteImporter.TARGET_FOLDER]
  *   (`BIT` -> `HiNote-Import/BIT`). Dateien direkt in der Wurzel, zu tiefe oder nicht über [FolderPath] gültige
- *   Verzeichnisnamen -> `HiNote-Import`. Verzeichnisnamen werden nicht umgeschrieben.
+ *   Verzeichnisnamen -> `HiNote-Import`. Verzeichnisnamen werden nur nach NFC normalisiert (zerlegte Umlaute einer
+ *   macOS-Quelle ergeben denselben Ordner wie die zusammengesetzte Schreibweise), sonst nicht umgeschrieben.
  * - **Doppelte Dateien derselben noteId im selben Lauf:** Gewinner ist die Datei mit (1) dem neuesten Dateizeitstempel,
  *   bei Gleichstand (2) der größten Seitenanzahl, dann (3) der in einem Unterverzeichnis (trägt eine Ordnerzuordnung),
  *   dann (4) der kleinsten Position in der Eingabeliste (= Namensreihenfolge). Alle anderen zählen als übersprungen.
@@ -23,7 +24,7 @@ object HinoteImportPlanner {
 
     fun folderFor(relativeDir: String): String {
         if (relativeDir.isEmpty()) return HinoteImporter.TARGET_FOLDER
-        val segments = relativeDir.split('/')
+        val segments = FolderPath.normalize(relativeDir).split('/')
         if (segments.size > MAX_DEPTH || segments.any { !FolderPath.isValidName(it) }) return HinoteImporter.TARGET_FOLDER
         val path = HinoteImporter.TARGET_FOLDER + "/" + segments.joinToString("/")
         return if (FolderPath.isValid(path)) path else HinoteImporter.TARGET_FOLDER

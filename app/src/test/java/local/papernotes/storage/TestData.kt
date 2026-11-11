@@ -52,11 +52,19 @@ internal object TestData {
 
     fun simpleNote(folder: String = "", title: String = "T"): Note = NoteFactory.newNote(title, folder)
 
-    fun zip(entries: List<Pair<String, ByteArray>>): ByteArray {
+    /** Mit [stored] werden alle Einträge unkomprimiert (STORED, wie die Medien der App) geschrieben. */
+    fun zip(entries: List<Pair<String, ByteArray>>, stored: Boolean = false): ByteArray {
         val bos = ByteArrayOutputStream()
         ZipOutputStream(bos).use { z ->
             for ((name, data) in entries) {
-                z.putNextEntry(ZipEntry(name))
+                val entry = ZipEntry(name)
+                if (stored) {
+                    entry.method = ZipEntry.STORED
+                    entry.size = data.size.toLong()
+                    entry.compressedSize = data.size.toLong()
+                    entry.crc = java.util.zip.CRC32().also { it.update(data) }.value
+                }
+                z.putNextEntry(entry)
                 z.write(data)
                 z.closeEntry()
             }
@@ -67,7 +75,7 @@ internal object TestData {
     fun manifest(
         id: String = uuid(),
         pageIds: List<String> = emptyList(),
-        version: Int = 1,
+        version: Int = PnoteCodec.FORMAT_VERSION,
         extra: String = "",
         folder: String = "",
     ): ByteArray {

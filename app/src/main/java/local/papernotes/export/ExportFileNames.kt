@@ -1,9 +1,12 @@
 package local.papernotes.export
 
+import java.text.Normalizer
+
 /**
  * Dateinamen für exportierte Dateien (reine Logik, JVM-testbar): aus dem Titel ein sicherer Name ohne Pfadtrenner,
  * `..`, Steuerzeichen oder auf Dateisystemen mit Einschränkungen (FAT/sdcardfs) verbotene Zeichen; Längenlimit;
- * eindeutig innerhalb eines Exports und gegenüber vorhandenen Dateien (" (2)", " (3)" usw.).
+ * eindeutig innerhalb eines Exports und gegenüber vorhandenen Dateien (" (2)", " (3)" usw.). Der Name ist nach NFC
+ * normalisiert, damit gleich aussehende Titel (zerlegter/zusammengesetzter Umlaut) denselben Dateinamen ergeben.
  */
 object ExportFileNames {
     const val MAX_BASE_LENGTH = 80
@@ -13,7 +16,7 @@ object ExportFileNames {
     /** Titel -> sicherer Dateiname ohne Endung (nie leer, nie länger als [MAX_BASE_LENGTH], enthält kein `..`). */
     fun base(title: String): String {
         val mapped = StringBuilder(title.length)
-        for (ch in title) {
+        for (ch in Normalizer.normalize(title, Normalizer.Form.NFC)) {
             mapped.append(if (ch.isISOControl() || ch in FORBIDDEN || Character.getType(ch) == Character.FORMAT.toInt()) '_' else ch)
         }
         var s = mapped.toString()

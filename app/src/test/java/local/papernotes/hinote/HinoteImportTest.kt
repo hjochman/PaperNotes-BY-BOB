@@ -250,6 +250,36 @@ class HinoteImportTest {
     }
 
     @Test
+    fun streamingEntryHasUnknownPackedSizeUntilReadAndRatioIsCheckedAfterwards() {
+        // ZipOutputStream schreibt DEFLATED ohne vorab gesetzte Größen mit Data-Descriptor: compressedSize ist -1,
+        // bis der Eintrag gelesen ist. Die Ratenprüfung des Readers muss trotzdem greifen (Messung nach dem Lesen).
+        val zeros = ByteArray(8 * 1024 * 1024)
+        val bytes = HinoteTestData.hinote(extra = listOf("files/${"d".repeat(32)}.bin" to zeros))
+        java.util.zip.ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+            var checked = false
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (!entry.name.endsWith("${"d".repeat(32)}.bin")) continue
+                assertEquals(-1L, entry.compressedSize)
+                PnoteCodec.readLimited(zip, PnoteCodec.MAX_ENTRY_BYTES, false)
+                assertTrue(entry.compressedSize > 0)
+                assertTrue(zeros.size / entry.compressedSize > HinoteContainerReader.MAX_RATIO)
+                checked = true
+            }
+            assertTrue(checked)
+        }
+        assertEquals(HinoteError.LimitExceeded, read(bytes).errorOrNull())
+    }
+
+    @Test
+    fun largeEntryWithNormalRatioIsAccepted() {
+        // 2 MiB Zufallsdaten (über RATIO_FREE_BYTES, Rate ca. 1) dürfen nicht abgelehnt werden
+        val noise = ByteArray(2 * 1024 * 1024).also { Random(7).nextBytes(it) }
+        val bytes = HinoteTestData.hinote(extra = listOf("files/${"f".repeat(32)}.bin" to noise))
+        assertNotNull(read(bytes).valueOrNull())
+    }
+
+    @Test
     fun notAZipAndMissingNoteAreCorrupt() {
         assertEquals(HinoteError.Corrupt, read(byteArrayOf(1, 2, 3, 4)).errorOrNull())
         val noNote = HinoteTestData.zip(listOf("custom_md.jhinote" to HinoteTestData.gzip("{}")))
@@ -283,6 +313,30 @@ class HinoteImportTest {
         val second = HinoteImportRunner.run(listOf(source("a", a), source("b", b)), repo, "Fallback")
         assertEquals(HinoteImportReport(imported = 0, skipped = 2, withWarnings = 0, failed = 0), second)
         assertEquals(2, repo.listAll("").valueOrNull()!!.size)
+    }
+
+    @Test
+    fun runnerCancelsBetweenNotesAndNeverLeavesHalfWrittenNote() {
+        val folder = tmp.newFolder("notes-cancel")
+        val repo = NoteRepository(folder)
+        val a = HinoteTestData.hinote()
+        val b = HinoteTestData.hinote(noteId = "e".repeat(32), title = "Zweite")
+        var cancelled = false
+        // Abbruch während der ersten Notiz (im Fortschrittsaufruf, vor dem Schreiben): sie wird noch vollständig
+        // gespeichert, die zweite gar nicht begonnen.
+        val report = HinoteImportRunner.run(
+            listOf(source("a", a), source("b", b)), repo, "Fallback",
+            isCancelled = { cancelled },
+            onProgress = { done, _ -> if (done == 1) cancelled = true },
+        )
+        assertEquals(HinoteImportReport(imported = 1, skipped = 0, withWarnings = 0, failed = 0), report)
+        val saved = repo.listAll("").valueOrNull()!!
+        assertEquals(1, saved.size)
+        assertTrue(repo.load(saved[0].id) is PnoteResult.Ok)
+        assertTrue(folder.walkTopDown().none { it.name.endsWith(".tmp") })
+        // erneuter Lauf holt die übrige Notiz nach
+        val again = HinoteImportRunner.run(listOf(source("a", a), source("b", b)), repo, "Fallback")
+        assertEquals(HinoteImportReport(imported = 1, skipped = 1, withWarnings = 0, failed = 0), again)
     }
 
     @Test

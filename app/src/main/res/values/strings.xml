@@ -203,6 +203,8 @@
     <string name="error_create">Die Notiz konnte nicht angelegt werden.</string>
     <string name="error_no_storage">Kein Speicherzugriff. Bitte den Zugriff auf Dateien in den App-Einstellungen erlauben (Notizen liegen in Dokumente/PaperNotes).</string>
     <string name="error_save">Speichern fehlgeschlagen.</string>
+    <string name="error_backup">Die automatische Sicherung funktioniert nicht. Bitte Speicherplatz und Speicherzugriff prüfen.</string>
+    <string name="error_backup_prune">Alte Sicherungen konnten nicht gelöscht werden. Der Speicher könnte sich füllen.</string>
     <string name="error_last_page">Die letzte Seite kann nicht gelöscht werden.</string>
     <string name="error_no_ink">Stiftschicht nicht verfügbar. Schreiben ist auf diesem Gerät nicht möglich.</string>
     <string name="pin_bar">Leiste festhalten</string>

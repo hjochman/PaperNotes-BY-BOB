@@ -18,11 +18,13 @@ use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\NotFoundResponse;
+use OCP\Files\File;
 use OCP\Files\NotFoundException;
 use OCP\Files\NotPermittedException;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUserSession;
+use Psr\Log\LoggerInterface;
 
 /**
  * Controller handling .pnote data extraction, preview images, and vector PDF exports.
@@ -36,6 +38,7 @@ class NoteController extends Controller {
 		private PdfExportService $pdfExportService,
 		private IUserSession $userSession,
 		private IL10N $l10n,
+		private LoggerInterface $logger,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -67,7 +70,11 @@ class NoteController extends Controller {
 			if (!isset($files[$fileId])) {
 				try {
 					$files[$fileId] = $this->storageService->getFileById($fileId);
-				} catch (\Throwable) {}
+				} catch (NotFoundException|NotPermittedException) {
+					// Not visible for this user: simply no title
+				} catch (\Throwable $e) {
+					$this->logger->warning('Resolving note for title failed', ['app' => $this->appName, 'fileId' => $fileId, 'exception' => $e]);
+				}
 			}
 		}
 
@@ -92,7 +99,9 @@ class NoteController extends Controller {
 				$result[$file->getName()] = $info;
 				$base = str_ends_with(strtolower($file->getName()), '.pnote') ? substr($file->getName(), 0, -6) : $file->getName();
 				$result[$base] = $info;
-			} catch (\Throwable) {}
+			} catch (\Throwable $e) {
+				$this->logger->warning('Reading note title failed', ['app' => $this->appName, 'fileId' => $fileId, 'exception' => $e]);
+			}
 		}
 
 		return new JSONResponse([
@@ -132,9 +141,11 @@ class NoteController extends Controller {
 		} catch (NotPermittedException) {
 			return new JSONResponse(['status' => 'error', 'message' => 'Permission denied'], Http::STATUS_FORBIDDEN);
 		} catch (PnoteParseException $e) {
-			return new JSONResponse(['status' => 'error', 'message' => 'Malformed note archive: ' . $e->getMessage()], Http::STATUS_UNPROCESSABLE_ENTITY);
+			$this->logger->warning('Malformed note archive', ['app' => $this->appName, 'fileId' => $fileId, 'exception' => $e]);
+			return new JSONResponse(['status' => 'error', 'message' => 'Malformed note archive'], Http::STATUS_UNPROCESSABLE_ENTITY);
 		} catch (\Throwable $e) {
-			return new JSONResponse(['status' => 'error', 'message' => 'Internal server error: ' . $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
+			$this->logger->error('Reading note failed', ['app' => $this->appName, 'fileId' => $fileId, 'exception' => $e]);
+			return new JSONResponse(['status' => 'error', 'message' => 'Internal server error'], Http::STATUS_INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -151,14 +162,9 @@ class NoteController extends Controller {
 	public function getPreview(int $fileId): Http\Response {
 		try {
 			$file = $this->storageService->getFileById($fileId);
-			$content = $file->getContent();
-			$temp = tempnam(sys_get_temp_dir(), 'prev_');
-			if ($temp === false) {
-				return new NotFoundResponse();
-			}
+			$temp = $this->copyToTempFile($file, 'prev_');
 
 			try {
-				file_put_contents($temp, $content);
 				$jpeg = $this->parserService->extractPreview($temp);
 				if ($jpeg === null) {
 					return new NotFoundResponse();
@@ -176,7 +182,10 @@ class NoteController extends Controller {
 					@unlink($temp);
 				}
 			}
-		} catch (\Throwable) {
+		} catch (NotFoundException|NotPermittedException) {
+			return new NotFoundResponse();
+		} catch (\Throwable $e) {
+			$this->logger->error('Reading note preview failed', ['app' => $this->appName, 'fileId' => $fileId, 'exception' => $e]);
 			return new NotFoundResponse();
 		}
 	}
@@ -198,15 +207,9 @@ class NoteController extends Controller {
 				return new NotFoundResponse();
 			}
 			$file = $this->storageService->getFileById($fileId);
-			$content = $file->getContent();
-			$temp = tempnam(sys_get_temp_dir(), 'media_');
-			if ($temp === false) {
-				return new NotFoundResponse();
-			}
+			$temp = $this->copyToTempFile($file, 'media_');
 
 			try {
-				file_put_contents($temp, $content);
-				unset($content);
 				$data = $this->parserService->extractMedia($temp, $name);
 				if ($data === null) {
 					return new NotFoundResponse();
@@ -237,9 +240,56 @@ class NoteController extends Controller {
 					@unlink($temp);
 				}
 			}
-		} catch (\Throwable) {
+		} catch (NotFoundException|NotPermittedException) {
+			return new NotFoundResponse();
+		} catch (\Throwable $e) {
+			$this->logger->error('Reading note media failed', ['app' => $this->appName, 'fileId' => $fileId, 'exception' => $e]);
 			return new NotFoundResponse();
 		}
+	}
+
+	/**
+	 * Streams a note file into a temporary file (ZipArchive needs a path) without holding its content in memory.
+	 * The size is checked before and while copying, so a manipulated file cannot fill /tmp.
+	 *
+	 * @param string $prefix Prefix of the temporary file name
+	 * @return string Path of the temporary file; the caller deletes it
+	 * @throws \RuntimeException
+	 */
+	private function copyToTempFile(File $file, string $prefix): string {
+		if (!$this->parserService->isAcceptableFileSize((int)$file->getSize())) {
+			throw new \RuntimeException('Note file size is not acceptable');
+		}
+		$temp = tempnam(sys_get_temp_dir(), $prefix);
+		if ($temp === false) {
+			throw new \RuntimeException('Cannot create temporary file');
+		}
+
+		$in = null;
+		$out = null;
+		try {
+			$in = $file->fopen('rb');
+			$out = fopen($temp, 'wb');
+			if (!is_resource($in) || !is_resource($out)) {
+				throw new \RuntimeException('Cannot open note file for copying');
+			}
+			$copied = stream_copy_to_stream($in, $out, PnoteParserService::MAX_FILE_BYTES + 1);
+			if ($copied === false || $copied > PnoteParserService::MAX_FILE_BYTES) {
+				throw new \RuntimeException('Copying note file failed or exceeded size limit');
+			}
+		} catch (\Throwable $e) {
+			if (is_resource($in)) {
+				fclose($in);
+			}
+			if (is_resource($out)) {
+				fclose($out);
+			}
+			@unlink($temp);
+			throw $e;
+		}
+		fclose($in);
+		fclose($out);
+		return $temp;
 	}
 
 	/**
@@ -273,9 +323,11 @@ class NoteController extends Controller {
 		} catch (NotPermittedException) {
 			return new JSONResponse(['status' => 'error', 'message' => 'Permission denied'], Http::STATUS_FORBIDDEN);
 		} catch (PnoteParseException $e) {
-			return new JSONResponse(['status' => 'error', 'message' => 'Cannot export invalid note: ' . $e->getMessage()], Http::STATUS_UNPROCESSABLE_ENTITY);
+			$this->logger->warning('Cannot export invalid note', ['app' => $this->appName, 'fileId' => $fileId, 'exception' => $e]);
+			return new JSONResponse(['status' => 'error', 'message' => 'Cannot export invalid note'], Http::STATUS_UNPROCESSABLE_ENTITY);
 		} catch (\Throwable $e) {
-			return new JSONResponse(['status' => 'error', 'message' => 'PDF export failed: ' . $e->getMessage()], Http::STATUS_INTERNAL_SERVER_ERROR);
+			$this->logger->error('PDF export failed', ['app' => $this->appName, 'fileId' => $fileId, 'exception' => $e]);
+			return new JSONResponse(['status' => 'error', 'message' => 'PDF export failed'], Http::STATUS_INTERNAL_SERVER_ERROR);
 		}
 	}
 }

@@ -379,6 +379,82 @@ class NoteSessionTest {
     }
 
     @Test
+    fun debounceWithoutMediaIs5Seconds() {
+        assertEquals(5_000L, NoteSession.debounceMs(false))
+        assertEquals(30_000L, NoteSession.debounceMs(true))
+    }
+
+    @Test
+    fun noteWithMediaIsSavedOnlyAfterLongDebounce() {
+        val pageId = session.currentPage.id
+        session.onAudioAdded(pageId, AudioAttachment("a1", "a.m4a", "Aufnahme 1", 1_000L), byteArrayOf(1, 2))
+        scheduler.advance(NoteSession.DEBOUNCE_MS)
+        assertTrue(store.saved.isEmpty())
+        scheduler.advance(NoteSession.DEBOUNCE_MEDIA_MS - NoteSession.DEBOUNCE_MS - 1)
+        assertTrue(store.saved.isEmpty())
+        scheduler.advance(1)
+        assertEquals(1, store.saved.size)
+        assertTrue(store.saved[0].media.containsKey("a.m4a"))
+        assertFalse(session.hasUnsavedChanges)
+    }
+
+    @Test
+    fun changesInNoteWithMediaRestartLongDebounce() {
+        session.onAudioAdded(session.currentPage.id, AudioAttachment("a1", "a.m4a", "Aufnahme 1", 1_000L), byteArrayOf(1))
+        scheduler.advance(20_000)
+        session.onStrokesChanged(listOf(stroke(1)))
+        scheduler.advance(29_999)
+        assertTrue(store.saved.isEmpty())
+        scheduler.advance(1)
+        assertEquals(1, store.saved.size)
+    }
+
+    @Test
+    fun firstMediaSwitchesPendingDebounceToLongOne() {
+        session.onStrokesChanged(listOf(stroke(1)))
+        scheduler.advance(3_000)
+        // Das erste Medium ersetzt den ausstehenden 5-s-Lauf durch einen 30-s-Lauf.
+        session.onImagesChanged(
+            listOf(ImageAttachment("i1", "a.png", 0f, 0f, 10f, 10f)),
+            mapOf("a.png" to byteArrayOf(1)),
+        )
+        scheduler.advance(NoteSession.DEBOUNCE_MS)
+        assertTrue(store.saved.isEmpty())
+        scheduler.advance(NoteSession.DEBOUNCE_MEDIA_MS - NoteSession.DEBOUNCE_MS)
+        assertEquals(1, store.saved.size)
+    }
+
+    @Test
+    fun removingLastMediaSwitchesBackToShortDebounce() {
+        session.onImagesChanged(
+            listOf(ImageAttachment("i1", "a.png", 0f, 0f, 10f, 10f)),
+            mapOf("a.png" to byteArrayOf(1)),
+        )
+        session.onImagesChanged(emptyList())
+        assertTrue(session.note.media.isEmpty())
+        scheduler.advance(NoteSession.DEBOUNCE_MS - 1)
+        assertTrue(store.saved.isEmpty())
+        scheduler.advance(1)
+        assertEquals(1, store.saved.size)
+    }
+
+    @Test
+    fun safetySavePointsStaySynchronousForNoteWithMedia() {
+        session.onAudioAdded(session.currentPage.id, AudioAttachment("a1", "a.m4a", "Aufnahme 1", 1_000L), byteArrayOf(1))
+        session.save() // onPause/onStop
+        assertEquals(1, store.saved.size)
+        session.onStrokesChanged(listOf(stroke(1)))
+        session.addPage() // Seite hinzufügen speichert sofort
+        assertEquals(2, store.saved.size)
+        session.onStrokesChanged(listOf(stroke(2)))
+        session.goToPage(0) // Seitenwechsel speichert sofort
+        assertEquals(3, store.saved.size)
+        session.onStrokesChanged(listOf(stroke(3)))
+        session.close() // onDestroy
+        assertEquals(4, store.saved.size)
+    }
+
+    @Test
     fun renameRejectsInvalidOrSameTitle() {
         assertFalse(session.rename("  "))
         assertFalse(session.rename("a".repeat(101)))

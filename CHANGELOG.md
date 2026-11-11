@@ -7,6 +7,27 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Release-Build: `assembleRelease`, `bundleRelease` und `packageRelease` brechen mit einer deutschen Fehlermeldung ab, wenn die Signierung nicht vollständig konfiguriert ist (`keystore.properties`, drei `PAPYRUS_*`-Einträge, Keystore-Datei); die Meldung nennt, was fehlt, nie Passwörter. Es entsteht kein unsigniertes Release-APK mehr. Debug-Builds, `test`, `lint`, `lintRelease` und `lintVitalRelease` sind nicht betroffen (Prüfung per `gradle.taskGraph.whenReady` in `app/build.gradle`).
+
+### Geändert
+- Akku und Speicher bei Notizen mit Medien: Der Autosave wartet bei Notizen mit Bildern oder Aufnahmen 30 s statt 5 s (`NoteSession.DEBOUNCE_MEDIA_MS`, Auswahl über `NoteSession.debounceMs`); Seitenwechsel, Seite hinzufügen/löschen und onPause/onStop/onDestroy speichern weiter sofort. Bei einem Absturz gehen bei Notizen mit Medien damit bis zu 30 s statt 5 s an Änderungen verloren.
+- `.pnote`: Medien (Bilder, Aufnahmen) und Vorschau werden unkomprimiert (ZIP STORED) geschrieben, weil sie schon komprimiert sind und Deflate bei jedem Speichern nur CPU kostet. Kein Formatwechsel (Version bleibt 2); App und Nextcloud-Plugin lesen beides.
+- Sync-Upload streamt die Datei (Prüfsumme in eigenem Durchlauf) statt sie ganz in den Speicher zu lesen; die Obergrenze sinkt von 256 MB auf 64 MB + 1 MB (Paketlimit plus ZIP-Overhead, wie im Plugin).
+- `.pnote`: Der Lesepfad für Format-Version 1 ist entfernt (`PnoteCodec.legacyViewToPage`, Seitenumrechnung beim Lesen, `PnoteParserService`-Parameter `manifestVersion`). Version 1 wurde nie ausgeliefert und war ohnehin wirkungslos (Faktor 1). Kleinste lesbare Version ist jetzt 2 (`MIN_VERSION`), in App und Plugin; Version 0 und 1 werden als beschädigt abgelehnt. Das Schreibformat ändert sich nicht.
+
+### Behoben
+- Editor: Beenden einer Aufnahme liest die Datei (bis 16 MB) nicht mehr im UI-Thread (nur beim Verlassen des Editors, wo sofort gespeichert wird, bleibt es synchron).
+- Bild einfügen: Fotos mit EXIF-Orientation (Drehung 90/180/270, gespiegelt) erscheinen aufrecht. Die Drehung wird beim Import einmal angewendet (im Hintergrund); Bilder ohne Drehung bleiben als Originalbytes unverändert (kein Neukodieren). Reine Logik in `ImageUtil.orientationOf`, Anbindung in `ImageAttachmentView.upright`. Format-Version bleibt 2.
+- Editor: Der Layout-Listener für die Tastaturhöhe wird in `onDestroy` entfernt; das Speichern der Vorschau hält nur noch den Anwendungskontext statt der Activity.
+- Startseite: Eingebettete Vorschau und Cache-Bild werden mit `inSampleSize` (höchstens 1024 Punkte) dekodiert; eine defekte Datei mit riesigen Maßen kann den Speicher nicht mehr füllen.
+- Ordnerwechsel einer Notiz: Lässt sich die alte Datei nicht löschen, bleibt die neu geschriebene Datei erhalten und `save` meldet den Fehler (`PnoteError.Io`); doppelte Notiz-IDs werden deterministisch aufgelöst (jüngste Datei gewinnt) und beim nächsten Speichern bereinigt.
+- Automatische Sicherung: Scheitert sie zweimal in Folge, zeigt der Editor einmal einen Hinweis (Texte de/en); scheitert nur das Aufräumen alter Sicherungen (dreimal in Folge), gibt es einen eigenen, leiseren Hinweis.
+- HiNote-Import: Die Kompressionsratenprüfung des Container-Lesers greift nach dem Lesen jedes Eintrags auch bei Streaming-ZIPs (Data-Descriptor, `compressedSize` vorher -1); bleibt die gepackte Größe unbekannt, begrenzen weiter die harten Größengrenzen (16 MB je Eintrag, 64 MB gesamt). Neue Tests mit Data-Descriptor und mit einer großen, normal komprimierten Datei.
+- HiNote-Import: Der Import wird beim Beenden der Startseite abgebrochen (`HinoteImportFlow.cancel()` in `onDestroy`, Dialog geschlossen, Abbruch wirkt zwischen den Notizen; eine begonnene Notiz wird atomar zu Ende geschrieben). Der Hintergrund-Executor wird immer in `finally` beendet; auch ein `OutOfMemoryError` bei sehr großen Dateien lässt den Dialog nicht mehr offen (Meldung „Import fehlgeschlagen“).
+- Umlaute und Akzente in Namen: Ordnernamen (neu anlegen, umbenennen), der Sync-Zielordner, Unterordner beim HiNote-Ordnerimport, Notiztitel (`NoteTitles.sanitize`) und Export-Dateinamen werden nach Unicode-NFC normalisiert (`FolderPath.normalize`, `java.text.Normalizer`). Ein zerlegtes „Ü“ („U“ + Trema, z. B. aus einer macOS-Quelle) ergibt damit denselben Namen wie das zusammengesetzte; lokale Pfade, Sync-Gedächtnis und gesendete Server-Pfade bleiben in einer Schreibweise, es entstehen keine Dubletten. `FolderPath.isValidName` bleibt unverändert und lehnt rohe NFD-Namen weiter ab (kombinierende Zeichen sind nicht erlaubt). Der Abgleich mit dem Server ist nicht geändert: ein Ordner, den ein anderer Client in NFD angelegt hat, wird ignoriert (siehe CodeReviewPlan.md, L6).
+- Barrierefreiheit (TalkBack): Das Lautsprecher-Symbol des Aufnahme-Abzeichens auf der Startseite ist für TalkBack ausgeblendet (der Container trägt die Beschreibung „Tonaufnahmen: n“), der Haken einer ausgewählten Zeile in Auswahldialogen trägt die Beschreibung „Ausgewählt“/„Selected“. Alle übrigen Schaltflächen und Symbole hatten schon eine `contentDescription` oder sind als dekorativ markiert.
+
 ## [0.6.0] - 2026-11-10
 
 ### Hinzugefügt

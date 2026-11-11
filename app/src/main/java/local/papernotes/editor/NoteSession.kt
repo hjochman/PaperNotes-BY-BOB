@@ -34,7 +34,12 @@ interface SaveScheduler {
  * (PnoteCodec: temporäre Datei, dann verschieben).
  *
  * Speicherzeitpunkte: [save] (für onPause/onStop), jeder Seitenwechsel, Seite hinzufügen/löschen, und
- * [DEBOUNCE_MS] nach der letzten Änderung.
+ * [debounceMs] nach der letzten Änderung: [DEBOUNCE_MS] (5 s) ohne Medien, [DEBOUNCE_MEDIA_MS] (30 s), sobald die Notiz
+ * Bilder oder Aufnahmen enthält. Jedes Speichern schreibt die ganze Datei neu (alle Medien, bis 64 MB); das seltener zu
+ * tun spart Akku und Heap. Kompromiss: Stürzt die App ab, gehen bei Notizen mit Medien die Änderungen seit der letzten
+ * Schreibpause von 30 s (statt 5 s) verloren; Seitenwechsel, Seite hinzufügen/löschen und onPause/onStop/onDestroy
+ * speichern weiter sofort. Die Wartezeit wird bei jeder Änderung neu gewählt und wechselt daher mit dem ersten bzw.
+ * letzten Medium mit; es gibt keinen zusätzlichen Timer, nur den einen Debounce-Lauf.
  */
 class NoteSession(
     initial: Note,
@@ -251,7 +256,7 @@ class NoteSession(
         note = note.copy(modified = clock())
         dirty = true
         cancelPending()
-        pendingToken = scheduler.postDelayed(DEBOUNCE_MS) {
+        pendingToken = scheduler.postDelayed(debounceMs(note.media.isNotEmpty())) {
             pendingToken = null
             save()
         }
@@ -267,6 +272,13 @@ class NoteSession(
     }
 
     companion object {
+        /** Wartezeit nach der letzten Änderung bei Notizen ohne Medien. */
         const val DEBOUNCE_MS = 5_000L
+
+        /** Wartezeit nach der letzten Änderung bei Notizen mit Medien (Bilder/Aufnahmen werden bei jedem Speichern neu verpackt). */
+        const val DEBOUNCE_MEDIA_MS = 30_000L
+
+        /** Wartezeit bis zum automatischen Speichern; [hasMedia] = [Note.media] ist nicht leer. */
+        fun debounceMs(hasMedia: Boolean): Long = if (hasMedia) DEBOUNCE_MEDIA_MS else DEBOUNCE_MS
     }
 }

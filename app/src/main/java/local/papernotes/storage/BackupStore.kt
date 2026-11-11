@@ -69,9 +69,22 @@ class BackupStore(
     private val backupDir: File = File(root, BACKUP_DIR)
     private val lock = Any()
 
+    /** Löscht eine überzählige Sicherung. Wirft [IOException] bei Fehlschlag; Naht für Tests. */
+    internal var deleteFile: (File) -> Unit = { Files.delete(it.toPath()) }
+
+    /**
+     * Anzahl der überzähligen Sicherungen, die beim letzten erfolgreichen [backup] nicht gelöscht werden konnten.
+     * Die neue Sicherung selbst ist davon unberührt (das Ergebnis von [backup] bleibt [PnoteResult.Ok]); der Wert dient
+     * dem Aufrufer als eigene, leisere Fehlerkategorie ("Aufräumen klappt nicht", Sicherungen wachsen über das Limit).
+     */
+    @Volatile
+    var lastPruneFailures: Int = 0
+        private set
+
     /**
      * Erstellt eine Sicherungskopie der Notizdatei [sourceFile] für die Notiz [noteId] mit Zeitstempel [timestamp].
-     * Rotiert automatisch alte Sicherungen, wenn [MAX_BACKUPS_PER_NOTE] überschritten wird.
+     * Rotiert automatisch alte Sicherungen, wenn [MAX_BACKUPS_PER_NOTE] überschritten wird; Fehler dabei stehen
+     * in [lastPruneFailures] und machen die Sicherung nicht zum Fehlschlag.
      */
     fun backup(noteId: String, sourceFile: File, timestamp: Long = clock()): PnoteResult<File> = synchronized(lock) {
         if (!PnoteCodec.isValidId(noteId)) return PnoteResult.Err(PnoteError.InvalidId)
@@ -94,7 +107,7 @@ class BackupStore(
             return PnoteResult.Err(PnoteError.Io)
         }
 
-        pruneOldBackups(noteDir)
+        lastPruneFailures = pruneOldBackups(noteDir)
         PnoteResult.Ok(targetFile)
     }
 
@@ -301,20 +314,24 @@ class BackupStore(
         if (failed) PnoteResult.Err(PnoteError.Io) else PnoteResult.Ok(removed)
     }
 
-    private fun pruneOldBackups(noteDir: File) {
+    /** Löscht die ältesten Sicherungen über dem Limit. Liefert die Zahl der Dateien, die sich nicht löschen ließen. */
+    private fun pruneOldBackups(noteDir: File): Int {
         val files = (noteDir.listFiles() ?: emptyArray())
             .filter { it.isFile && !Files.isSymbolicLink(it.toPath()) && BACKUP_FILE_PATTERN.matches(it.name) }
             .sortedBy { it.name.removeSuffix(".pnote").toLongOrNull() ?: 0L }
 
+        var failed = 0
         if (files.size > MAX_BACKUPS_PER_NOTE) {
             val toDeleteCount = files.size - MAX_BACKUPS_PER_NOTE
             for (i in 0 until toDeleteCount) {
                 try {
-                    Files.delete(files[i].toPath())
-                } catch (ignored: IOException) {
+                    deleteFile(files[i])
+                } catch (e: IOException) {
+                    failed++
                 }
             }
         }
+        return failed
     }
 
     private fun resolveNoteBackupDir(noteId: String): File? {

@@ -203,6 +203,8 @@
     <string name="error_create">The note could not be created.</string>
     <string name="error_no_storage">No storage access. Please allow file access in the app settings (notes are stored in Documents/PaperNotes).</string>
     <string name="error_save">Saving failed.</string>
+    <string name="error_backup">Automatic backup is not working. Please check free space and storage access.</string>
+    <string name="error_backup_prune">Old backups could not be deleted. Storage may fill up.</string>
     <string name="error_last_page">The last page cannot be deleted.</string>
     <string name="error_no_ink">Pen layer not available. Writing is not possible on this device.</string>
     <string name="pin_bar">Pin toolbar</string>

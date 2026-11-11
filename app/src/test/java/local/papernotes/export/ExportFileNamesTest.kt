@@ -13,6 +13,15 @@ class ExportFileNamesTest {
     }
 
     @Test
+    fun decomposedAndComposedTitlesGiveTheSameFileName() {
+        assertEquals("\u00DCbung Caf\u00E9", ExportFileNames.base("U\u0308bung Cafe\u0301"))
+        assertEquals(ExportFileNames.base("\u00DCbung"), ExportFileNames.base("U\u0308bung"))
+        val used = HashSet<String>()
+        assertEquals("\u00DCbung.pdf", ExportFileNames.next("\u00DCbung", used))
+        assertEquals("\u00DCbung (2).pdf", ExportFileNames.next("U\u0308bung", used))
+    }
+
+    @Test
     fun pathSeparatorsAndForbiddenCharactersAreReplaced() {
         val name = ExportFileNames.base("a/b\\c:d*e?f\"g<h>i|j")
         assertEquals("a_b_c_d_e_f_g_h_i_j", name)

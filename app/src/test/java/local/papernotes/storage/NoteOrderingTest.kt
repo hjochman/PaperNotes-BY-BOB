@@ -85,6 +85,16 @@ class NoteTitlesTest {
     }
 
     @Test
+    fun sanitizeNormalizesToNfcAndIsIdempotent() {
+        val nfd = "U\u0308bung Cafe\u0301"
+        val nfc = "\u00DCbung Caf\u00E9"
+        assertEquals(nfc, NoteTitles.sanitize(nfd))
+        assertEquals(nfc, NoteTitles.sanitize(nfc))
+        assertEquals(nfc, NoteTitles.sanitize(NoteTitles.sanitize(nfd)))
+        assertTrue(NoteTitles.isValid(NoteTitles.sanitize(nfd)))
+    }
+
+    @Test
     fun sanitizeTrimsFiltersAndLimits() {
         assertEquals("ab", NoteTitles.sanitize("  a\nb \u0007 "))
         assertEquals(NoteTitles.MAX_LENGTH, NoteTitles.sanitize("x".repeat(500)).length)

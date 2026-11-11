@@ -7,26 +7,27 @@ namespace OCA\PaperNotes\Service;
 use Exception;
 use OCP\Files\File;
 use OCP\Files\IRootFolder;
-use OCP\Files\Node;
 use OCP\Files\NotFoundException;
 use OCP\Files\NotPermittedException;
 use OCP\IUser;
 use OCP\IUserSession;
-use OCP\Share\IManager as IShareManager;
 
 /**
- * Service to securely access and resolve .pnote files in Nextcloud storage for the current user or share.
+ * Service to securely access and resolve .pnote files in the file tree of the signed-in user.
  */
 class PnoteStorageService {
 	public function __construct(
 		private IRootFolder $rootFolder,
 		private IUserSession $userSession,
-		private IShareManager $shareManager,
 	) {
 	}
 
 	/**
 	 * Resolves a .pnote file by its Nextcloud numeric file ID with permission checks.
+	 *
+	 * Only files in the file tree of the signed-in user are found. That includes files shared with the user
+	 * (user, group, team, Talk and Deck shares are mounted into the user's file tree once accepted), but not
+	 * public link shares opened without signing in, and not shares the user has not accepted yet.
 	 *
 	 * @param int $fileId
 	 * @return File
@@ -46,13 +47,6 @@ class PnoteStorageService {
 					return $node;
 				}
 			}
-		}
-
-		// Check if file is shared
-		$node = $this->getFileFromShare($fileId);
-		if ($node instanceof File) {
-			$this->validatePnoteFile($node);
-			return $node;
 		}
 
 		throw new NotFoundException('Note file not found or inaccessible');
@@ -123,35 +117,5 @@ class PnoteStorageService {
 		if (!str_ends_with($name, '.pnote')) {
 			throw new Exception('File is not a .pnote document');
 		}
-	}
-
-	/**
-	 * Checks shares if the user is a recipient of the file.
-	 *
-	 * @param int $fileId
-	 * @return Node|null
-	 */
-	private function getFileFromShare(int $fileId): ?Node {
-		try {
-			$user = $this->userSession->getUser();
-			$userId = $user ? $user->getUID() : '';
-
-			$shares = $this->shareManager->getSharedWith($userId, \OCP\Share\IShare::TYPE_USER, null, -1, 0);
-			foreach ($shares as $share) {
-				$node = $share->getNode();
-				if ($node && $node->getId() === $fileId) {
-					return $node;
-				}
-				if ($node && $node instanceof \OCP\Files\Folder) {
-					$subNodes = $node->getById($fileId);
-					if (!empty($subNodes)) {
-						return $subNodes[0];
-					}
-				}
-			}
-		} catch (\Throwable) {
-			// Ignore share resolution exceptions
-		}
-		return null;
 	}
 }

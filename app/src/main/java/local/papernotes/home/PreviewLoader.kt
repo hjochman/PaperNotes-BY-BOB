@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.os.Handler
 import android.os.Looper
 import android.util.LruCache
+import local.papernotes.editor.ImageUtil
 import local.papernotes.storage.NoteRepository
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -68,17 +69,36 @@ class PreviewLoader(context: Context, private val notesRoot: File) {
         }
     }
 
+    /**
+     * Optionen für die Dekodierung: RGB_565 und höchstens [MAX_DECODE_DIM] Bildpunkte Kantenlänge (`inSampleSize`).
+     * Erzeugte Vorschauen sind 360 Punkte breit und bleiben unverändert; die Grenze schützt nur vor einer defekten oder
+     * präparierten Datei, deren wenige KB Daten zu riesigen Maßen dekodieren würden. Null, wenn kein Bild erkennbar ist.
+     */
+    private fun limitedOptions(bounds: BitmapFactory.Options): BitmapFactory.Options? {
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        return BitmapFactory.Options().apply {
+            inPreferredConfig = Bitmap.Config.RGB_565
+            inSampleSize = ImageUtil.sampleSize(bounds.outWidth, bounds.outHeight, MAX_DECODE_DIM)
+        }
+    }
+
     private fun obtain(id: String, modified: Long): Bitmap? {
         val repo = NoteRepository(notesRoot)
         // 1. Eingebettete Vorschau (preview.jpg im Paket): kein Rendern nötig.
         repo.loadPreview(id)?.let { jpeg ->
-            val opts = BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.RGB_565 }
-            BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size, opts)?.let { return it }
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size, bounds)
+            limitedOptions(bounds)?.let { opts ->
+                BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size, opts)?.let { return it }
+            }
         }
         // 2. Rückfall für Notizen ohne eingebettete Vorschau (ältere Dateien): aus dem Cache oder neu rendern.
         diskCache.find(id, modified)?.let { f ->
-            val opts = BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.RGB_565 }
-            BitmapFactory.decodeFile(f.path, opts)?.let { return it }
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(f.path, bounds)
+            limitedOptions(bounds)?.let { opts ->
+                BitmapFactory.decodeFile(f.path, opts)?.let { return it }
+            }
         }
         val note = repo.load(id).valueOrNull() ?: return null
         val bmp = PreviewRenderer(appContext).render(note) ?: return null
@@ -104,5 +124,6 @@ class PreviewLoader(context: Context, private val notesRoot: File) {
 
     private companion object {
         const val MEMORY_BYTES = 24 * 1024 * 1024
+        const val MAX_DECODE_DIM = 1024
     }
 }

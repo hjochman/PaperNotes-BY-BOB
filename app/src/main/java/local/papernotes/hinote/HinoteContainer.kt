@@ -135,6 +135,9 @@ object HinoteContainerReader {
             val limit = minOf(PnoteCodec.MAX_ENTRY_BYTES, PnoteCodec.MAX_TOTAL_BYTES - total)
             val data = PnoteCodec.readLimited(zip, limit, keep)
             total += data.size
+            // Erst nach dem vollständigen Lesen auswerten: bei Streaming-ZIPs (Data-Descriptor) ist compressedSize
+            // vorher -1 und wird von ZipInputStream erst beim Eintragsende aus dem Descriptor gesetzt. Bleibt sie
+            // dennoch unbekannt (<= 0), schützen allein die harten Grenzen in readLimited (Einzel-/Gesamtgröße).
             val packed = entry.compressedSize
             if (packed > 0 && data.size > RATIO_FREE_BYTES && data.size / packed > MAX_RATIO) {
                 throw HinoteException(HinoteError.LimitExceeded)

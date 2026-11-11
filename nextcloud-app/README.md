@@ -20,12 +20,13 @@ Ermöglicht das direkte Betrachten von `.pnote`-Notizbüchern im Nextcloud-Webbr
   - **Vektor-Striche:** Originalgetreue Darstellung aller Striche mit runden Kappen (`lineCap: round`), runden Übergängen (`lineJoin: round`), variabler Strichbreite und exakter ARGB-Farbpalette.
   - **Textboxen, Bilder, Aufnahmen (ab B1):** Textboxen mit Hintergrund, Fett, Kursiv, Unterstrichen, Farbe, Größe, Listen und Ausrichtung; Bilder unter den Strichen; Aufnahmen stehen nicht auf der Seite, sondern als eigene Player-Zeile unter der Seite.
   - **Navigation:** Vor/Zurück-Blättern, Seitenzahlanzeige (`Seite X / Y`), Tastatursteuerung (Pfeiltasten / Bild auf/ab), Seitenleiste mit anklickbaren Miniaturvorschauen und Lesezeichen-Sternen (`★`).
-  - **Zoom & Pan:** Vergrößern (`+`), Verkleinern (`-`), Einpassen ins Fenster (`Fit`), 100%-Ansicht, Verschieben per Mausdrag oder Touch-Geste, Strg+Mausrad-Zoom.
+  - **Sprachen:** Der Viewer (Schaltflächen, Hinweise, Fehlermeldungen) und die Vorlagenbeschriftungen erscheinen auf Deutsch, wenn die Nextcloud-Sprache des Nutzers Deutsch ist, sonst auf Englisch. Die Texte stehen als Tabelle (`de`/`en`) in `js/papernotes-viewer.js`; die Dateiaktionen übersetzt `l10n/`.
+  - **Zoom & Pan:** Vergrößern (`+`), Verkleinern (`-`), Einpassen ins Fenster (`Fit` bzw. `Anpassen`), 100%-Ansicht, Verschieben per Mausdrag oder Touch-Geste, Strg+Mausrad-Zoom.
 - **PDF-Export & Download:**
   - Erzeugt hochwertige, standardkonforme PDF-1.4-Vektordokumente direkt auf dem Server.
   - Skaliert Seiten automatisch auf DIN-A4-Breite (595 pt) unter Beibehaltung des Seitenverhältnisses.
   - Reines PHP ohne externe Abhängigkeiten oder Binärprogramme (zlib-Kompression integriert).
-  - Enthält Bilder und Textboxen (Rich-Text). Bei Notizen mit Aufnahmen fragt „PDF Download“, ob die Aufnahmen als Dateianhänge an den Seiten eingebettet werden sollen (`?audio=1`, bis 48 MB); gezeichnet werden sie nie.
+  - Enthält Bilder und Textboxen (Rich-Text). Bei Notizen mit Aufnahmen fragt „PDF herunterladen“ (englisch „Download PDF“), ob die Aufnahmen als Dateianhänge an den Seiten eingebettet werden sollen (`?audio=1`, bis 48 MB); gezeichnet werden sie nie.
   - Download per Klick in der Viewer-Kopfzeile oder direkt aus dem Dateien-Kontextmenü.
 - **Umfassende Sicherheit:**
   - Schutz vor Zip-Bomben und Überlastung durch strikte Obergrenzen:
@@ -41,7 +42,9 @@ Ermöglicht das direkte Betrachten von `.pnote`-Notizbüchern im Nextcloud-Webbr
     - Ablehnung von Einträgen mit `..`, `\`, führendem `/`, unzulässigen Zeichen oder Längen > 200 Zeichen.
     - Nur erlaubte Einträge: `manifest.json`, `preview.jpg`, `preview.png`, `pages/<uuid>.json`, `media/<uuid>.<ext>`.
   - UUID-Prüfung nach RFC 4122 (nur Kleinbuchstaben-Hex-Muster).
-  - Rechteprüfung über Nextclouds interne Speicher- und Freigabeschicht (`IRootFolder`, `IUserSession`, `IShareManager`).
+  - Rechteprüfung über das Dateisystem des angemeldeten Nutzers (`IRootFolder::getUserFolder()->getById()`, `IUserSession`). Es werden nur Notizen geöffnet, die im Dateibaum des Nutzers sichtbar sind und die er lesen darf.
+  - **Freigaben:** Mit dem Nutzer geteilte Notizen und Ordner (Benutzer-, Gruppen-, Team-, Talk- und Deck-Freigaben) liegen nach dem Annehmen in seinem Dateibaum und funktionieren daher wie eigene Dateien. **Nicht unterstützt:** öffentliche Link-Freigaben ohne Anmeldung (Viewer und PDF verlangen eine Nextcloud-Anmeldung) sowie noch nicht angenommene Freigaben. Dieses Verhalten ist noch nicht in einer echten Nextcloud geprüft.
+  - Vorschau und Medien werden aus einer temporären Kopie gelesen, die Datei wird dafür gestreamt (nicht im Speicher gehalten) und nur bis zu einer Größe von etwa 65 MB kopiert.
 
 ---
 
@@ -80,7 +83,7 @@ nextcloud-app/
     ├── templates/
     │   └── viewer.php             # Template für Direktansicht
     └── tests/
-        └── run_tests.php          # Eigenständige Testsuite (58 Tests)
+        └── run_tests.php          # Eigenständige Testsuite (96 Tests)
 ```
 
 ---
@@ -158,7 +161,7 @@ Ausgabe:
   [PASS] Preview: Extracted preview.jpg faithfully
 
 ================================================
-Results: 58 passed, 0 failed
+Results: 98 passed, 0 failed
 ```
 
 ---
