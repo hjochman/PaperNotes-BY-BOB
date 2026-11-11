@@ -6,7 +6,7 @@
     <string name="home_all_notes">All notes</string>
     <string name="home_uncategorized">Uncategorized</string>
     <string name="home_favorites">Favorites</string>
-    <string name="home_recently_deleted">Recently deleted</string>
+    <string name="home_recently_deleted">Trash</string>
     <string name="uncategorized_empty">No uncategorized notes</string>
     <string name="favorites_empty">No favorites</string>
     <plurals name="notes_count">
@@ -319,6 +319,18 @@
     <string name="backup_restore_title_format">%1$s (Backup %2$s)</string>
     <string name="backup_saved_format">backed up %1$s</string>
     <string name="settings_trash">Trash</string>
+    <string name="settings_trash_section">Trash</string>
+    <string name="settings_trash_retention">Delete automatically after</string>
+    <string name="trash_retention_title">Empty trash automatically</string>
+    <string name="trash_retention_never">Never</string>
+    <string name="trash_retention_default">%d days (default)</string>
+    <plurals name="trash_retention_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <string name="backups_help">Help</string>
+    <string name="backups_help_title">How backups work</string>
+    <string name="backups_help_message">While you write, the app automatically saves a backup copy of the note at the interval you choose in Settings, but only if something changed.\n\nThe last 10 backups of each note are kept; older ones are deleted automatically. Here you see the latest backup of each note. “Restore as copy” creates a new note from it and never overwrites the original.\n\nWhen a note goes to the trash, its backups are kept as an emergency copy. When the note is permanently deleted there, individually, by emptying the trash, or automatically after the set period, its backups are deleted too.\n\nIn Settings you can change the interval or delete all backups.</string>
     <string name="settings_version">Version</string>
     <string name="settings_about">About</string>
     <string name="trash_empty_action">Empty trash</string>
@@ -330,6 +342,7 @@
     <string name="trash_delete_forever">Delete permanently</string>
     <string name="trash_delete_title">Delete permanently?</string>
     <string name="trash_delete_message">“%1$s” will be permanently deleted. This cannot be undone.</string>
+    <string name="trash_expires_format">permanently deleted from %1$s</string>
     <string name="trash_deleted_format">deleted %1$s</string>
     <plurals name="trash_pages">
         <item quantity="one">%d page</item>
@@ -346,14 +359,14 @@
     <string name="about_news_title">New in version %1$s</string>
     <string name="about_bullet_format">• %1$s</string>
     <string-array name="about_news_items">
-        <item>Text boxes with formatting (bold, italic, lists, indent), edited right on the page</item>
-        <item>Text boxes, images and recordings in previews and PDF</item>
-        <item>Five more page templates, all HiNote templates on import</item>
-        <item>Stroke eraser, translucent marker, lasso menu</item>
-        <item>Share as PDF, export audio</item>
+        <item>Low-latency handwriting with native E-Ink pen layer on Huawei MatePad Paper</item>
+        <item>21 page templates, rich-text boxes, images, audio recordings and vector PDF export</item>
+        <item>Trash bin with retention policy (default 30 days), categories and automatic backups</item>
+        <item>HiNote note import (cards, folder hierarchy, SAF)</item>
+        <item>Nextcloud synchronization and browser plugin with native PaperNote display</item>
     </string-array>
     <string name="about_description">PaperNotes by BOB is a note-taking app for handwritten notes on the Huawei Paper (E-Ink). Notes are stored as files in the Documents/PaperNotes folder and can be organized in folders, shared, exported as PDF and restored from the trash. Automatic backups, import of HiNote notes and a one-way sync to Nextcloud are built in.</string>
-    <string name="about_license">Free software under the GNU General Public License v3.0 or later. Copyright © 2025 hjochman. This program is distributed without any warranty.</string>
+    <string name="about_license">Free software under the GNU General Public License v3.0 or later. Copyright © 2025–2026 hjochman. This program is distributed without any warranty.</string>
     <string name="about_source">Source code on GitHub</string>
     <string name="about_close">Close</string>
     <string name="about_no_browser">No browser found.</string>

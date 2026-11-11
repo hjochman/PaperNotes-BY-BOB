@@ -25,6 +25,7 @@
             android:src="@drawable/ic_back" />
 
         <TextView
+            android:id="@+id/textTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -35,6 +36,12 @@
             android:text="@string/backups_title"
             android:textColor="@color/black"
             android:textSize="28sp" />
+
+        <ImageButton
+            android:id="@+id/buttonHelp"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/backups_help"
+            android:src="@drawable/ic_help" />
     </LinearLayout>
 
     <TextView

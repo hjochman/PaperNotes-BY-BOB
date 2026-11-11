@@ -11,6 +11,9 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import local.papernotes.CategoryMenu
+import local.papernotes.CategoryTarget
+import local.papernotes.EinkDialog
 import local.papernotes.NotesLocation
 import local.papernotes.R
 import local.papernotes.home.DateLabels
@@ -30,7 +33,7 @@ import java.util.concurrent.Executors
 /**
  * Übersicht der automatischen Sicherungskopien: Gruppiert nach Notiz mit Titel der jüngsten Sicherung,
  * Datum, Seitenzahl und Anzahl der Versionen.
- * Blättern statt Scrollen (E-Ink). Pro Eintrag "Wiederherstellen als Kopie".
+ * Blättern statt Scrollen (E-Ink). Pro Eintrag "Wiederherstellen als Kopie"; oben rechts erklärt ein Hilfe-Knopf das Konzept.
  * Dateizugriffe laufen nie im UI-Thread.
  */
 class BackupsActivity : Activity() {
@@ -65,6 +68,13 @@ class BackupsActivity : Activity() {
         if (savedInstanceState != null) page = savedInstanceState.getInt(STATE_PAGE, 0)
 
         findViewById<ImageButton>(R.id.buttonBack).setOnClickListener { finish() }
+        findViewById<TextView>(R.id.textTitle).apply {
+            text = getString(R.string.backups_title) + "  ▾"
+            setOnClickListener { CategoryMenu.show(this@BackupsActivity, this, io) { CategoryMenu.switchFrom(this@BackupsActivity, CategoryTarget.BACKUPS, it) } }
+        }
+        findViewById<ImageButton>(R.id.buttonHelp).setOnClickListener {
+            EinkDialog.message(this, getString(R.string.backups_help_title), getString(R.string.backups_help_message), getString(R.string.dialog_ok))
+        }
         buttonPrevPage.setOnClickListener {
             page = Pagination.previous(page, pages.size)
             render()

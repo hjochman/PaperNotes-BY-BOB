@@ -45,6 +45,10 @@ class SabrePlugin extends ServerPlugin {
 
 		$fileId = $fileInfo->getId();
 
+		$propFind->handle('{DAV:}getcontenttype', function() {
+			return 'application/x-papernotes';
+		});
+
 		$propFind->handle('{DAV:}displayname', function() use ($node, $fileId, $fileInfo) {
 			if (isset(self::$titleCache[$fileId])) {
 				return self::$titleCache[$fileId];

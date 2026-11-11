@@ -10,7 +10,9 @@
     "von": "of",
     "PDF Download": "PDF Download",
     "Schließen": "Close",
-    "Seiten": "Pages"
+    "Seiten": "Pages",
+    "PaperNote": "PaperNote",
+    "PaperNotes Notiz": "PaperNotes notebook"
   },
   "pluralForm": "nplurals=2; plural=(n != 1);"
 }

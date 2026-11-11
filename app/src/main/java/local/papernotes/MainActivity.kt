@@ -30,10 +30,10 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import local.papernotes.about.AboutActivity
+import local.papernotes.backup.BackupsActivity
 import local.papernotes.editor.EditorActivity
 import local.papernotes.export.ExportFlow
 import local.papernotes.hinote.HinoteImportFlow
-import local.papernotes.home.CategoryCounts
 import local.papernotes.home.DateLabels
 import local.papernotes.home.Entry
 import local.papernotes.home.FolderItem
@@ -58,6 +58,9 @@ import local.papernotes.storage.PnoteError
 import local.papernotes.storage.PnoteResult
 import local.papernotes.storage.NoteOrdering
 import local.papernotes.storage.SortOrder
+import local.papernotes.storage.BackupStore
+import local.papernotes.storage.TrashPolicy
+import local.papernotes.storage.TrashService
 import local.papernotes.sync.SyncCoordinator
 import local.papernotes.sync.SyncDialog
 import local.papernotes.sync.SyncStatusLogic
@@ -123,6 +126,7 @@ class MainActivity : Activity() {
     private var emptyMessage = R.string.notes_empty
     private var layout: List<List<List<Int>>> = emptyList()
     private var permissionAsked = false
+    private var trashPurged = false
 
     private val exportFlow by lazy { ExportFlow(this) }
     private val importFlow by lazy { HinoteImportFlow(this, { repo }) {
@@ -134,8 +138,6 @@ class MainActivity : Activity() {
 
     /** [icon] = 0: kein Symbol, aber gleiche Einrückung (z. B. nicht gewählte Sortierung). */
     private class MenuEntry(val icon: Int, val label: String, val enabled: Boolean = true, val action: () -> Unit)
-
-    private class CategoryMenuItem(val icon: Int, val label: String, val count: Int, val action: () -> Unit)
 
     private val tileActions = object : TileActions {
         override fun openNote(id: String) {
@@ -275,6 +277,17 @@ class MainActivity : Activity() {
         if (selection.active) outState.putStringArrayList(STATE_SELECTION, selection.encode())
     }
 
+    /** Kommt aus Papierkorb oder Sicherungen mit einer gewählten Kategorie zurück (siehe [CategoryMenu.switchFrom]). */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val category = intent.getStringExtra(CategoryMenu.EXTRA_CATEGORY)?.let { runCatching { HomeCategory.valueOf(it) }.getOrNull() } ?: return
+        intent.removeExtra(CategoryMenu.EXTRA_CATEGORY)
+        currentCategory = category
+        currentFolder = ""
+        page = 0
+    }
+
     override fun onResume() {
         super.onResume()
         io.execute { ExportFlow.deleteStaleShares(cacheDir) }
@@ -283,6 +296,7 @@ class MainActivity : Activity() {
         updateSyncUi()
         if (NotesLocation.hasAccess(this)) {
             ensureRepo()
+            purgeTrashOnce()
             load()
         } else if (!permissionAsked) {
             permissionAsked = true
@@ -341,6 +355,19 @@ class MainActivity : Activity() {
     }
 
     // ---------------------------------------------------------------- Laden und Darstellen
+
+    /** Einmal je Start der Startseite: Papierkorb-Einträge nach Ablauf der Frist samt Sicherungen löschen (läuft vor dem Laden). */
+    private fun purgeTrashOnce() {
+        if (trashPurged) return
+        trashPurged = true
+        val r = repo ?: return
+        val days = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
+            .getInt(TrashPolicy.PREF_KEY_RETENTION_DAYS, TrashPolicy.DEFAULT_RETENTION_DAYS)
+        val root = NotesLocation.root(this)
+        io.execute {
+            if (TrashService(r, BackupStore(root)).purgeExpired(days) > 0) NotesWidgetUpdater.requestUpdate(this)
+        }
+    }
 
     private fun ensureRepo() {
         if (repo != null) return
@@ -647,109 +674,15 @@ class MainActivity : Activity() {
     // ---------------------------------------------------------------- Menüs
 
     private fun showCategoryMenu(anchor: View) {
-        val r = repo ?: return
-        io.execute {
-            val counts = HomeModel.categoryCounts(r)
-            runOnUiThread {
-                if (isDestroyed) return@runOnUiThread
-                showCategoryPopup(anchor, counts)
+        CategoryMenu.show(this, anchor, io) { target ->
+            when (target) {
+                CategoryTarget.ALL -> setCategory(HomeCategory.ALL)
+                CategoryTarget.UNCATEGORIZED -> setCategory(HomeCategory.UNCATEGORIZED)
+                CategoryTarget.FAVORITES -> setCategory(HomeCategory.FAVORITES)
+                CategoryTarget.TRASH -> startActivity(Intent(this, TrashActivity::class.java))
+                CategoryTarget.BACKUPS -> startActivity(Intent(this, BackupsActivity::class.java))
             }
         }
-    }
-
-    private fun showCategoryPopup(anchor: View, counts: CategoryCounts) {
-        val items = listOf(
-            CategoryMenuItem(R.drawable.ic_all_notes, getString(R.string.home_all_notes), counts.all) {
-                setCategory(HomeCategory.ALL)
-            },
-            CategoryMenuItem(R.drawable.ic_uncategorized, getString(R.string.home_uncategorized), counts.uncategorized) {
-                setCategory(HomeCategory.UNCATEGORIZED)
-            },
-            CategoryMenuItem(R.drawable.ic_star, getString(R.string.home_favorites), counts.favorites) {
-                setCategory(HomeCategory.FAVORITES)
-            },
-            CategoryMenuItem(R.drawable.ic_trash, getString(R.string.home_recently_deleted), counts.trash) {
-                startActivity(Intent(this, TrashActivity::class.java))
-            },
-        )
-        val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = getDrawable(R.drawable.bg_dialog)
-            setPadding(dp(2), dp(2), dp(2), dp(2))
-        }
-        lateinit var popup: PopupWindow
-        items.forEachIndexed { i, item ->
-            if (i > 0) {
-                content.addView(
-                    View(this).apply { setBackgroundColor(getColor(R.color.line_gray)) },
-                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)),
-                )
-            }
-            content.addView(categoryMenuRow(item) {
-                popup.dismiss()
-                item.action()
-            })
-        }
-        val unspecified = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        content.measure(unspecified, unspecified)
-        val minWidth = dp(280)
-        val width = maxOf(minWidth, minOf(content.measuredWidth, resources.displayMetrics.widthPixels - dp(16)))
-        popup = PopupWindow(content, width, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            elevation = 0f
-            animationStyle = 0
-            isOutsideTouchable = true
-        }
-        val root = anchor.rootView
-        val pos = IntArray(2)
-        anchor.getLocationInWindow(pos)
-        val margin = dp(8)
-        val x = pos[0].coerceIn(margin, maxOf(margin, root.width - width - margin))
-        val height = content.measuredHeight
-        var y = pos[1] + anchor.height
-        if (y + height > root.height - margin) y = pos[1] - height
-        y = y.coerceIn(margin, maxOf(margin, root.height - height - margin))
-        popup.showAtLocation(root, Gravity.TOP or Gravity.START, x, y)
-    }
-
-    private fun categoryMenuRow(item: CategoryMenuItem, onClick: () -> Unit): View {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            minimumHeight = dp(56)
-            setPadding(dp(16), 0, dp(16), 0)
-            background = getDrawable(R.drawable.bg_tool)
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { onClick() }
-        }
-        row.addView(
-            ImageView(this).apply {
-                setImageResource(item.icon)
-                imageTintList = getColorStateList(R.color.icon_tint)
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            },
-            LinearLayout.LayoutParams(dp(24), dp(24)),
-        )
-        row.addView(
-            TextView(this).apply {
-                text = item.label
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-                setTextColor(getColorStateList(R.color.text_tint))
-                setPadding(dp(16), 0, 0, 0)
-            },
-            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
-        )
-        row.addView(
-            TextView(this).apply {
-                text = item.count.toString()
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-                setTextColor(getColorStateList(R.color.text_tint))
-                setPadding(dp(16), 0, 0, 0)
-            },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT),
-        )
-        return row
     }
 
     private fun showNewMenu(anchor: View) = showMenu(

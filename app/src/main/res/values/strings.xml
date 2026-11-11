@@ -6,7 +6,7 @@
     <string name="home_all_notes">Alle Notizen</string>
     <string name="home_uncategorized">Nicht kategorisiert</string>
     <string name="home_favorites">Favoriten</string>
-    <string name="home_recently_deleted">Zuletzt gelöscht</string>
+    <string name="home_recently_deleted">Papierkorb</string>
     <string name="uncategorized_empty">Keine nicht kategorisierten Notizen</string>
     <string name="favorites_empty">Keine Favoriten</string>
     <plurals name="notes_count">
@@ -319,6 +319,18 @@
     <string name="backup_restore_title_format">%1$s (Sicherung %2$s)</string>
     <string name="backup_saved_format">gesichert %1$s</string>
     <string name="settings_trash">Papierkorb</string>
+    <string name="settings_trash_section">Papierkorb</string>
+    <string name="settings_trash_retention">Automatisch löschen nach</string>
+    <string name="trash_retention_title">Papierkorb automatisch leeren</string>
+    <string name="trash_retention_never">Nie</string>
+    <string name="trash_retention_default">%d Tage (Standard)</string>
+    <plurals name="trash_retention_days">
+        <item quantity="one">%d Tag</item>
+        <item quantity="other">%d Tage</item>
+    </plurals>
+    <string name="backups_help">Hilfe</string>
+    <string name="backups_help_title">So funktionieren Sicherungen</string>
+    <string name="backups_help_message">Während du schreibst, legt die App in dem Abstand, den du in den Einstellungen wählst, automatisch eine Sicherungskopie der Notiz an – aber nur, wenn sich etwas geändert hat.\n\nPro Notiz bleiben die letzten 10 Sicherungen erhalten; ältere werden automatisch gelöscht. Hier siehst du je Notiz die jüngste Sicherung. „Wiederherstellen als Kopie“ legt daraus eine neue Notiz an und überschreibt nie das Original.\n\nWandert eine Notiz in den Papierkorb, bleiben ihre Sicherungen als Notfallkopie erhalten. Wird die Notiz dort endgültig gelöscht, einzeln, beim Leeren oder automatisch nach der eingestellten Frist, werden auch ihre Sicherungen gelöscht.\n\nIn den Einstellungen kannst du das Intervall ändern oder alle Sicherungen löschen.</string>
     <string name="settings_version">Version</string>
     <string name="settings_about">Info</string>
     <string name="trash_empty_action">Papierkorb leeren</string>
@@ -330,6 +342,7 @@
     <string name="trash_delete_forever">Endgültig löschen</string>
     <string name="trash_delete_title">Endgültig löschen?</string>
     <string name="trash_delete_message">„%1$s“ wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.</string>
+    <string name="trash_expires_format">wird ab %1$s endgültig gelöscht</string>
     <string name="trash_deleted_format">gelöscht %1$s</string>
     <plurals name="trash_pages">
         <item quantity="one">%d Seite</item>
@@ -346,14 +359,14 @@
     <string name="about_news_title">Neu in Version %1$s</string>
     <string name="about_bullet_format">• %1$s</string>
     <string-array name="about_news_items">
-        <item>Textboxen mit Formatierung (Fett, Kursiv, Listen, Einzug), direkt auf dem Blatt</item>
-        <item>Textboxen, Bilder und Aufnahmen in Vorschau und PDF</item>
-        <item>Fünf weitere Seitenvorlagen, alle HiNote-Vorlagen beim Import</item>
-        <item>Radierer „Striche löschen“, Marker mit Transparenz, Lasso-Menü</item>
-        <item>Teilen als PDF, Audio exportieren</item>
+        <item>Flüssiges Schreiben mit nativer E-Ink-Stiftschicht auf dem Huawei MatePad Paper</item>
+        <item>21 Seitenvorlagen, Rich-Text-Textboxen, Bilder, Audioaufnahmen und Vektor-PDF-Export</item>
+        <item>Papierkorb mit automatischer Frist (Standard 30 Tage), Kategorien und automatische Sicherungen</item>
+        <item>HiNote-Notiz-Import (Kacheln, Ordnerhierarchie, SAF)</item>
+        <item>Nextcloud-Sync und Browser-Plugin mit nativer PaperNote-Anzeige</item>
     </string-array>
     <string name="about_description">PaperNotes by BOB ist eine Notiz-App für handschriftliche Notizen auf dem Huawei Paper (E-Ink). Notizen liegen als Dateien im Ordner Dokumente/PaperNotes und lassen sich in Ordnern ordnen, teilen, als PDF exportieren und im Papierkorb wiederherstellen. Automatische Sicherungen, der Import von HiNote-Notizen und ein Einweg-Sync nach Nextcloud sind eingebaut.</string>
-    <string name="about_license">Freie Software unter der GNU General Public License v3.0 oder später. Copyright © 2025 hjochman. Dieses Programm wird ohne jede Gewährleistung verteilt.</string>
+    <string name="about_license">Freie Software unter der GNU General Public License v3.0 oder später. Copyright © 2025–2026 hjochman. Dieses Programm wird ohne jede Gewährleistung verteilt.</string>
     <string name="about_source">Quellcode auf GitHub</string>
     <string name="about_close">Schließen</string>
     <string name="about_no_browser">Kein Browser gefunden.</string>

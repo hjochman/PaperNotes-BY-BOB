@@ -56,8 +56,8 @@ data class NoteBackupGroup(
  *   geprüft, symbolischen Links wird nicht gefolgt.
  * - Atomares Schreiben: Kopie der bestehenden `.pnote`-Datei über temporäre Zwischendatei und atomaren Rename.
  * - Aufbewahrungsbegrenzung: Pro Notiz maximal [MAX_BACKUPS_PER_NOTE] Sicherungen; älteste zuerst gelöscht.
- * - Persistenz bei Papierkorb-Aktionen: Wenn eine Notiz in den Papierkorb wandert oder aus dem Papierkorb endgültig
- *   gelöscht bzw. der Papierkorb geleert wird, bleiben die Sicherungen in `.backup/` für Notfälle erhalten.
+ * - Papierkorb: Wandert eine Notiz in den Papierkorb, bleiben ihre Sicherungen erhalten. Wird sie dort endgültig
+ *   gelöscht (einzeln, Papierkorb leeren oder nach Ablauf der Frist), löscht [TrashService] auch ihre Sicherungen.
  * - Wiederherstellung: Erzeugt immer eine NEUE Notizkopie mit frischen UUIDs (über [NoteRepository.save]) und
  *   überschreibt niemals die vorhandene Notiz.
  */

@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Ablauf "HiNote-Notizen importieren" für die Startseite: Dateiauswahl per Storage Access Framework
  * (`ACTION_OPEN_DOCUMENT`, mehrere Dateien, `.hinote` hat keinen eigenen MIME-Typ) oder direktes, rekursives Durchsuchen von
- * `Documents/hinote/custom` (Unterverzeichnisse bis Tiefe 3 -> Unterordner von `HiNote-Import`, Regeln in [HinoteImportPlanner]). Der Import läuft in einem Hintergrund-Thread mit Textfortschritt ("Notiz 3/14", keine Animation,
+ * `Documents/hinote/custom` (Unterverzeichnisse bis Tiefe 3 -> gleichnamige Ordner, Regeln in [HinoteImportPlanner]). Der Import läuft in einem Hintergrund-Thread mit Textfortschritt ("Notiz 3/14", keine Animation,
  * abbrechbar); danach zeigt ein Dialog die Zählung. Muss im UI-Thread benutzt werden.
  */
 internal class HinoteImportFlow(private val activity: Activity, private val repo: () -> NoteRepository?, private val onFinished: () -> Unit) {
@@ -46,7 +46,7 @@ internal class HinoteImportFlow(private val activity: Activity, private val repo
         data.data?.let { uris.add(it) }
         data.clipData?.let { clip -> for (i in 0 until minOf(clip.itemCount, MAX_FILES)) clip.getItemAt(i).uri?.let { uris.add(it) } }
         val sources = uris.distinct().map { uri -> HinoteImportSource(uri.toString()) { activity.contentResolver.openInputStream(uri) } }
-        start { sources }
+        start(inImportFolder = true) { sources }
         return true
     }
 
@@ -56,7 +56,7 @@ internal class HinoteImportFlow(private val activity: Activity, private val repo
             EinkDialog.message(activity, activity.getString(R.string.import_title), activity.getString(R.string.error_no_storage), activity.getString(R.string.dialog_ok))
             return
         }
-        start { scanFolder() }
+        start(inImportFolder = false) { scanFolder() }
     }
 
     /** Bricht einen laufenden Import ab und schließt den Fortschrittsdialog (aufgerufen in `onDestroy` der Startseite). */
@@ -76,7 +76,7 @@ internal class HinoteImportFlow(private val activity: Activity, private val repo
         }
     }
 
-    private fun start(sources: () -> List<HinoteImportSource>) {
+    private fun start(inImportFolder: Boolean, sources: () -> List<HinoteImportSource>) {
         if (running != null) return
         val r = repo()
         if (r == null) {
@@ -114,24 +114,24 @@ internal class HinoteImportFlow(private val activity: Activity, private val repo
                 } catch (e: OutOfMemoryError) {
                     null
                 }
-                finishWith(report, empty, progress, cancelled)
+                finishWith(report, empty, inImportFolder, progress, cancelled)
             } finally {
                 executor.shutdown()
             }
         }
     }
 
-    private fun finishWith(report: HinoteImportReport?, empty: Boolean, progress: EinkDialog.Progress, cancelled: AtomicBoolean) {
+    private fun finishWith(report: HinoteImportReport?, empty: Boolean, inImportFolder: Boolean, progress: EinkDialog.Progress, cancelled: AtomicBoolean) {
         activity.runOnUiThread {
             if (activity.isDestroyed || cancelled.get()) return@runOnUiThread
             running = null
             progress.dismiss()
-            showResult(report, empty)
+            showResult(report, empty, inImportFolder)
             onFinished()
         }
     }
 
-    private fun showResult(report: HinoteImportReport?, empty: Boolean) {
+    private fun showResult(report: HinoteImportReport?, empty: Boolean, inImportFolder: Boolean) {
         val title = activity.getString(R.string.import_title)
         val ok = activity.getString(R.string.dialog_ok)
         if (report == null) {
@@ -141,7 +141,7 @@ internal class HinoteImportFlow(private val activity: Activity, private val repo
         }
         val sb = StringBuilder(activity.getString(R.string.import_result, report.imported, report.skipped, report.withWarnings))
         if (report.failed > 0) sb.append('\n').append(activity.getString(R.string.import_result_failed, report.failed))
-        if (report.imported > 0) sb.append("\n\n").append(activity.getString(R.string.import_result_folder, HinoteImporter.TARGET_FOLDER))
+        if (inImportFolder && report.imported > 0) sb.append("\n\n").append(activity.getString(R.string.import_result_folder, HinoteImporter.TARGET_FOLDER))
         EinkDialog.message(activity, title, sb.toString(), ok)
     }
 

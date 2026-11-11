@@ -8,6 +8,20 @@ tr[data-file$=".pnote"] .nametext .innernametext {
     font-weight: 500;
 }
 
+/* PaperNotes custom filetype icon in list, grid, and sidebar */
+.files-list__row[data-cy-files-list-row-name$=".pnote"] .files-list__row-icon,
+.files-list__row[data-cy-files-list-row-name$=".pnote"] .files-list__row-thumbnail,
+tr[data-file$=".pnote"] .filename .thumbnail,
+tr[data-mime="application/x-papernotes"] .filename .thumbnail,
+tr[data-mime="application/x-pnote"] .filename .thumbnail,
+.files-list__grid-item[data-cy-files-list-row-name$=".pnote"] .files-list__grid-icon,
+.files-list__grid-item[data-cy-files-list-row-name$=".pnote"] .files-list__grid-thumbnail {
+    background-image: url('../img/pnote.svg') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+}
+
 #papernotes-modal {
     position: fixed;
     top: 0;
@@ -313,9 +327,8 @@ tr[data-file$=".pnote"] .nametext .innernametext {
 .papernotes-viewport {
     flex: 1;
     overflow: auto;
+    scrollbar-gutter: stable;
     display: flex;
-    align-items: center;
-    justify-content: center;
     padding: 24px;
     cursor: grab;
 }
@@ -325,6 +338,9 @@ tr[data-file$=".pnote"] .nametext .innernametext {
 }
 
 .papernotes-canvas-container {
+    /* auto margins center the page and keep its start reachable by scrolling when it is larger than the viewport */
+    margin: auto;
+    flex: 0 0 auto;
     display: inline-block;
     background: #ffffff;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.1);

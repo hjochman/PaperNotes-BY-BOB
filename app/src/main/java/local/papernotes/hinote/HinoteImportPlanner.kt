@@ -10,10 +10,11 @@ class ScannedFile(val file: File, val relativeDir: String, val lastModified: Lon
 /**
  * Reine Planungslogik des Ordnerimports (JVM-testbar):
  *
- * - **Zielordner:** Das Unterverzeichnis relativ zur Scanwurzel wird Ordnerpfad unterhalb von [HinoteImporter.TARGET_FOLDER]
- *   (`BIT` -> `HiNote-Import/BIT`). Dateien direkt in der Wurzel, zu tiefe oder nicht über [FolderPath] gültige
- *   Verzeichnisnamen -> `HiNote-Import`. Verzeichnisnamen werden nur nach NFC normalisiert (zerlegte Umlaute einer
- *   macOS-Quelle ergeben denselben Ordner wie die zusammengesetzte Schreibweise), sonst nicht umgeschrieben.
+ * - **Zielordner:** Das Unterverzeichnis relativ zur Scanwurzel wird unverändert der Ordnerpfad der Notiz
+ *   (`BIT` -> `BIT`, `A/B` -> `A/B`), die Ordnerstruktur von HiNote bleibt also erhalten. Dateien direkt in der Wurzel,
+ *   zu tiefe oder nicht über [FolderPath] gültige Verzeichnisnamen -> Wurzel (`""`). Verzeichnisnamen werden nur nach NFC
+ *   normalisiert (zerlegte Umlaute einer macOS-Quelle ergeben denselben Ordner wie die zusammengesetzte Schreibweise),
+ *   sonst nicht umgeschrieben. Nur der Import über die Dateiauswahl (kennt keine Ordner) nutzt [HinoteImporter.TARGET_FOLDER].
  * - **Doppelte Dateien derselben noteId im selben Lauf:** Gewinner ist die Datei mit (1) dem neuesten Dateizeitstempel,
  *   bei Gleichstand (2) der größten Seitenanzahl, dann (3) der in einem Unterverzeichnis (trägt eine Ordnerzuordnung),
  *   dann (4) der kleinsten Position in der Eingabeliste (= Namensreihenfolge). Alle anderen zählen als übersprungen.
@@ -23,11 +24,10 @@ object HinoteImportPlanner {
     const val MAX_DEPTH = 3
 
     fun folderFor(relativeDir: String): String {
-        if (relativeDir.isEmpty()) return HinoteImporter.TARGET_FOLDER
-        val segments = FolderPath.normalize(relativeDir).split('/')
-        if (segments.size > MAX_DEPTH || segments.any { !FolderPath.isValidName(it) }) return HinoteImporter.TARGET_FOLDER
-        val path = HinoteImporter.TARGET_FOLDER + "/" + segments.joinToString("/")
-        return if (FolderPath.isValid(path)) path else HinoteImporter.TARGET_FOLDER
+        if (relativeDir.isEmpty()) return ""
+        val path = FolderPath.normalize(relativeDir)
+        if (path.split('/').size > MAX_DEPTH || !FolderPath.isValid(path)) return ""
+        return path
     }
 
     class Candidate(val key: Int, val noteId: String, val lastModified: Long, val pageCount: Int, val inSubfolder: Boolean)

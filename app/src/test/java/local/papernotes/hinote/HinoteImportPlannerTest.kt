@@ -15,24 +15,24 @@ class HinoteImportPlannerTest {
 
     @Test
     fun folderMapping() {
-        assertEquals("HiNote-Import", HinoteImportPlanner.folderFor(""))
-        assertEquals("HiNote-Import/BIT", HinoteImportPlanner.folderFor("BIT"))
-        assertEquals("HiNote-Import/Open Shift", HinoteImportPlanner.folderFor("Open Shift"))
-        assertEquals("HiNote-Import/A/B/C", HinoteImportPlanner.folderFor("A/B/C"))
+        assertEquals("", HinoteImportPlanner.folderFor(""))
+        assertEquals("BIT", HinoteImportPlanner.folderFor("BIT"))
+        assertEquals("Open Shift", HinoteImportPlanner.folderFor("Open Shift"))
+        assertEquals("A/B/C", HinoteImportPlanner.folderFor("A/B/C"))
     }
 
     @Test
     fun decomposedUmlautsFromMacSourcesMapToTheComposedFolder() {
-        assertEquals("HiNote-Import/B\u00FCro", HinoteImportPlanner.folderFor("Bu\u0308ro"))
-        assertEquals("HiNote-Import/B\u00FCro", HinoteImportPlanner.folderFor("B\u00FCro"))
-        assertEquals("HiNote-Import/\u00DCbung/M\u00E4rz", HinoteImportPlanner.folderFor("U\u0308bung/Ma\u0308rz"))
-        assertEquals("HiNote-Import", HinoteImportPlanner.folderFor("\u0308"))
+        assertEquals("B\u00FCro", HinoteImportPlanner.folderFor("Bu\u0308ro"))
+        assertEquals("B\u00FCro", HinoteImportPlanner.folderFor("B\u00FCro"))
+        assertEquals("\u00DCbung/M\u00E4rz", HinoteImportPlanner.folderFor("U\u0308bung/Ma\u0308rz"))
+        assertEquals("", HinoteImportPlanner.folderFor("\u0308"))
     }
 
     @Test
-    fun invalidOrTooDeepFoldersFallBackToImportFolder() {
+    fun invalidOrTooDeepFoldersFallBackToRoot() {
         for (rel in listOf("A/B/C/D", ".versteckt", "a..b/.x", "x*y", "a/ b", "a\\b", "..", " ", "a".repeat(81))) {
-            assertEquals(rel, "HiNote-Import", HinoteImportPlanner.folderFor(rel))
+            assertEquals(rel, "", HinoteImportPlanner.folderFor(rel))
         }
     }
 

@@ -11,13 +11,19 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import local.papernotes.CategoryMenu
+import local.papernotes.CategoryTarget
 import local.papernotes.EinkDialog
 import local.papernotes.NotesLocation
 import local.papernotes.R
 import local.papernotes.home.DateLabels
 import local.papernotes.home.Pagination
+import local.papernotes.storage.BackupStore
 import local.papernotes.storage.NoteRepository
 import local.papernotes.storage.PnoteResult
+import local.papernotes.SettingsActivity
+import local.papernotes.storage.TrashPolicy
+import local.papernotes.storage.TrashService
 import local.papernotes.storage.TrashedNote
 import local.papernotes.widget.NotesWidgetUpdater
 import java.util.Locale
@@ -28,7 +34,7 @@ import java.util.concurrent.Executors
 /**
  * Papierkorb-Ansicht: Notizen aus `.trash/` mit Titel, Ursprungsordner, Löschdatum und Seitenzahl, Blättern statt Scrollen (E-Ink).
  * Pro Eintrag "Wiederherstellen" und "Endgültig löschen" (mit Rückfrage), oben "Papierkorb leeren" (mit Rückfrage).
- * Es gibt keine automatische Löschfrist. Dateizugriffe laufen nie im UI-Thread; Titel und Pfade werden nicht geloggt.
+ * Endgültiges Löschen entfernt auch die Sicherungen der Notiz ([TrashService]). Die automatische Löschfrist stellt man in den Einstellungen ein. Dateizugriffe laufen nie im UI-Thread; Titel und Pfade werden nicht geloggt.
  */
 class TrashActivity : Activity() {
     private val io: ExecutorService = Executors.newSingleThreadExecutor()
@@ -64,6 +70,10 @@ class TrashActivity : Activity() {
         if (savedInstanceState != null) page = savedInstanceState.getInt(STATE_PAGE, 0)
 
         findViewById<ImageButton>(R.id.buttonBack).setOnClickListener { finish() }
+        findViewById<TextView>(R.id.textTitle).apply {
+            text = getString(R.string.settings_trash) + "  ▾"
+            setOnClickListener { CategoryMenu.show(this@TrashActivity, this, io) { CategoryMenu.switchFrom(this@TrashActivity, CategoryTarget.TRASH, it) } }
+        }
         actionEmptyTrash.setOnClickListener { askEmptyTrash() }
         buttonPrevPage.setOnClickListener {
             page = Pagination.previous(page, pages.size)
@@ -159,10 +169,14 @@ class TrashActivity : Activity() {
                 ellipsize = TextUtils.TruncateAt.END
             },
         )
+        val retentionDays = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
+            .getInt(TrashPolicy.PREF_KEY_RETENTION_DAYS, TrashPolicy.DEFAULT_RETENTION_DAYS)
+        val expiresAt = TrashPolicy.expiresAt(note.deleted, retentionDays)
         val details = TrashEntryText.details(
             folder = TrashEntryText.folderName(note.folderPath, getString(R.string.home_all_notes)),
             deleted = getString(R.string.trash_deleted_format, dates.format(note.deleted)),
             pages = resources.getQuantityString(R.plurals.trash_pages, note.pageCount, note.pageCount),
+            expires = expiresAt?.let { getString(R.string.trash_expires_format, dates.format(it)) }.orEmpty(),
         )
         texts.addView(
             TextView(this).apply {
@@ -189,7 +203,18 @@ class TrashActivity : Activity() {
 
     // ---------------------------------------------------------------- Aktionen
 
-    private fun restore(note: TrashedNote) = runRepo { it.restoreFromTrash(note.entryName) }
+    private fun restore(note: TrashedNote) {
+        val r = repo ?: return
+        io.execute {
+            val failed = r.restoreFromTrash(note.entryName) is PnoteResult.Err
+            NotesWidgetUpdater.requestUpdate(this)
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                if (failed) toast(R.string.error_action_failed)
+                load()
+            }
+        }
+    }
 
     private fun askDeleteForever(note: TrashedNote) {
         EinkDialog.confirm(
@@ -197,7 +222,7 @@ class TrashActivity : Activity() {
             getString(R.string.trash_delete_title),
             getString(R.string.trash_delete_message, note.title),
             getString(R.string.trash_delete_forever),
-        ) { runRepo { it.deleteFromTrash(note.entryName) } }
+        ) { runRepo { it.deleteForever(note.entryName) } }
     }
 
     private fun askEmptyTrash() {
@@ -211,10 +236,10 @@ class TrashActivity : Activity() {
     }
 
     /** Führt [block] im Hintergrund aus, meldet Fehler und lädt danach neu. */
-    private fun runRepo(block: (NoteRepository) -> PnoteResult<*>) {
+    private fun runRepo(block: (TrashService) -> PnoteResult<*>) {
         val r = repo ?: return
         io.execute {
-            val failed = block(r) is PnoteResult.Err
+            val failed = block(TrashService(r, BackupStore(NotesLocation.root(this)))) is PnoteResult.Err
             NotesWidgetUpdater.requestUpdate(this)
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread

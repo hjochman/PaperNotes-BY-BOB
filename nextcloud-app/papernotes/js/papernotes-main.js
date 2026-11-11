@@ -66,6 +66,47 @@
     }
 
     /**
+     * Register PaperNotes MIME types and display names with Nextcloud OC.MimeType.
+     */
+    function registerMimeTypes() {
+        const typeLabel = l10n('PaperNote', 'PaperNote');
+        if (typeof OC !== 'undefined') {
+            if (OC.MimeTypeList) {
+                OC.MimeTypeList.names = OC.MimeTypeList.names || {};
+                OC.MimeTypeList.names['application/x-papernotes'] = typeLabel;
+                OC.MimeTypeList.names['application/x-pnote'] = typeLabel;
+            }
+
+            if (OC.MimeType) {
+                OC.MimeType._mimeTypeNames = OC.MimeType._mimeTypeNames || {};
+                OC.MimeType._mimeTypeNames['application/x-papernotes'] = typeLabel;
+                OC.MimeType._mimeTypeNames['application/x-pnote'] = typeLabel;
+
+                const iconUrl = (window.OC && typeof window.OC.imagePath === 'function')
+                    ? window.OC.imagePath('papernotes', 'pnote.svg')
+                    : (window.OC && typeof window.OC.filePath === 'function'
+                        ? window.OC.filePath('papernotes', 'img', 'pnote.svg')
+                        : '/apps/papernotes/img/pnote.svg');
+
+                OC.MimeType._mimeTypeIcons = OC.MimeType._mimeTypeIcons || {};
+                OC.MimeType._mimeTypeIcons['application/x-papernotes'] = iconUrl;
+                OC.MimeType._mimeTypeIcons['application/x-pnote'] = iconUrl;
+
+                if (typeof OC.MimeType.getMimeTypeDisplayName === 'function' && !OC.MimeType._papernotesHooked) {
+                    OC.MimeType._papernotesHooked = true;
+                    const origGetMimeTypeDisplayName = OC.MimeType.getMimeTypeDisplayName;
+                    OC.MimeType.getMimeTypeDisplayName = function(mime) {
+                        if (mime === 'application/x-papernotes' || mime === 'application/x-pnote' || (typeof mime === 'string' && mime.includes('papernotes'))) {
+                            return typeLabel;
+                        }
+                        return origGetMimeTypeDisplayName.apply(this, arguments);
+                    };
+                }
+            }
+        }
+    }
+
+    /**
      * Modern Nextcloud (@nextcloud/files) File Actions registration.
      */
     function registerModernFileActions() {
@@ -331,11 +372,51 @@
         return null;
     }
 
+    function enrichSidebar() {
+        const sidebars = document.querySelectorAll('.files-sidebar, .app-sidebar, aside.app-sidebar, [data-cy-files-sidebar], .file-details');
+        const paperNoteLabel = l10n('PaperNote', 'PaperNote');
+
+        sidebars.forEach(sidebar => {
+            const headerTitleEl = sidebar.querySelector('.files-sidebar__header-name, .app-sidebar-header__title, .files-sidebar__details-name, h2, h3, .app-sidebar-header__desc');
+            const headerText = headerTitleEl ? headerTitleEl.textContent.trim() : '';
+            const hasPnoteAttr = sidebar.querySelector('[data-file$=".pnote"]') !== null ||
+                                 (sidebar.getAttribute('data-file') || '').endsWith('.pnote');
+
+            let isPnoteActive = headerText.endsWith('.pnote') || headerText.includes('.pnote') || hasPnoteAttr;
+            if (!isPnoteActive) {
+                const selectedRows = document.querySelectorAll('tr.files-list__row.selected, tr[data-file].selected, .files-list__row--selected');
+                selectedRows.forEach(r => {
+                    if (isPaperNotesRow(r)) isPnoteActive = true;
+                });
+            }
+
+            if (isPnoteActive) {
+                const candidateElements = sidebar.querySelectorAll('.files-sidebar__details-row, .files-sidebar__details-value, .files-sidebar__section, .file-details__value, .value, tr, dl, dt, dd, div, span, p');
+                candidateElements.forEach(item => {
+                    if (item.children.length === 0) {
+                        const valText = item.textContent.trim();
+                        if (/^(application\/x-papernotes|application\/x-pnote|unbekannt|unknown|application\/octet-stream)$/i.test(valText)) {
+                            item.textContent = paperNoteLabel;
+                        }
+                    }
+                });
+            }
+        });
+    }
+
     function applyCachedTitles() {
+        const paperNoteLabel = l10n('PaperNote', 'PaperNote');
+
         // 1. Update Pinia Store nodes for reactive Vue rendering
         const storeNodes = getStoreNodes();
         storeNodes.forEach(node => {
             if (isPaperNotesNode(node)) {
+                node.mime = 'application/x-papernotes';
+                node.mimetype = 'application/x-papernotes';
+                if (node.attributes) {
+                    node.attributes.mimetype = 'application/x-papernotes';
+                    node.attributes.mimetypeDescription = paperNoteLabel;
+                }
                 const id = node.fileid || node.id;
                 const name = node.basename || node.displayname || node.name || '';
                 const base = name.replace(/\.pnote$/i, '');
@@ -352,6 +433,15 @@
         const rows = document.querySelectorAll('tr.files-list__row, tr[data-file], .files-list__grid-item, div.files-list__row');
         rows.forEach(row => {
             if (!isPaperNotesRow(row)) return;
+
+            // Ensure file type text in row columns is not "Unbekannt" / "Unknown"
+            const typeEl = row.querySelector('.files-list__row-type, [data-cy-files-list-row-type], td.type, td.mimetype, .file-type');
+            if (typeEl) {
+                const currentTypeText = typeEl.textContent.trim().toLowerCase();
+                if (!currentTypeText || currentTypeText === 'unbekannt' || currentTypeText === 'unknown' || currentTypeText.includes('octet-stream') || currentTypeText.includes('x-papernotes') || currentTypeText.includes('x-pnote')) {
+                    typeEl.textContent = paperNoteLabel;
+                }
+            }
 
             const fileId = row.getAttribute('data-cy-files-list-row-fileid') ||
                            row.getAttribute('data-id') ||
@@ -383,6 +473,8 @@
                 rowLink.title = `${meta.title} (${meta.name || fileNameAttr || fileId})`;
             }
         });
+
+        enrichSidebar();
     }
 
     function enrichFileRows() {
@@ -440,6 +532,7 @@
     }
 
     function initPaperNotes() {
+        registerMimeTypes();
         registerModernFileActions();
         registerClassicFileActions();
         registerViewerHandler();

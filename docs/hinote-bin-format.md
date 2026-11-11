@@ -396,7 +396,7 @@ Schriftbild stimmen überein (Hintergrundpunkte fehlen im eigenen Rendering, wei
 | Bilder (11), Textboxen (2) | ja (seit 0.5.0) | `pageElement[]` siehe 1.2.1; Bilddateien liegen im ZIP; Textformatierung aus dem `html`-Feld (`HinoteHtml`) |
 | Seiten im Altformat `HWEINKBYTE` | ja (seit dem Gesamtimport) | 57 Seiten in 8 Notizen, Aufbau in 2.6 |
 | Audioaufnahmen, Gliederung | **ungeprüft/nein** | Listen in Proben leer |
-| Ordner/Kategorie | **nein** (nicht im Export) | extern: `tmp/device/exp/all/index.json`; der Ordnerimport übernimmt die Unterverzeichnisse von `Documents/hinote/custom` als Unterordner von `HiNote-Import` (Abschnitt 6.1) |
+| Ordner/Kategorie | **nein** (nicht im Export) | extern: `tmp/device/exp/all/index.json`; der Ordnerimport übernimmt die Unterverzeichnisse von `Documents/hinote/custom` als gleichnamige Ordner in der Wurzel (Abschnitt 6.1) |
 | Erkennungstext (`attachment` Typ 1) | möglich | 27 Seiten, optional für die Suche |
 | Verschlossene Notizen | nicht exportiert | im Bestand keine verschlossene Notiz gefunden (kein Schloss-Symbol, alle 34 exportierbar) |
 | Formgruppen (Abschlussblock) | nur lesen, nicht prüfbar | Proben ohne Gruppen |
@@ -436,8 +436,9 @@ Dateiende verlangen.
 ### 6.1 Ordnerimport aus `Documents/hinote/custom`
 
 - Der Import „Aus Documents/hinote/custom importieren“ durchsucht das Verzeichnis rekursiv (Tiefe höchstens 3, keine Symlinks, höchstens
-  500 Dateien). Das Unterverzeichnis relativ zur Scanwurzel wird Ordnerpfad unterhalb von `HiNote-Import` (`BIT` → `HiNote-Import/BIT`).
-  Dateien direkt in der Wurzel sowie Verzeichnisnamen, die nach `FolderPath` ungültig sind, oder zu tiefe Verzeichnisse → `HiNote-Import`.
+  500 Dateien). Das Unterverzeichnis relativ zur Scanwurzel wird unverändert der Ordnerpfad der Notiz (`BIT` → `BIT`), die Ordnerstruktur
+  von HiNote bleibt erhalten. Dateien direkt in der Wurzel sowie Verzeichnisnamen, die nach `FolderPath` ungültig sind, oder zu tiefe
+  Verzeichnisse → Wurzel (nicht kategorisiert).
 - **Mehrere Dateien derselben `noteId` im selben Lauf:** Es wird genau eine importiert – die mit dem neuesten Dateizeitstempel; bei Gleichstand
   die mit den meisten Seiten, dann die im Unterverzeichnis, dann die erste in Namensreihenfolge. Die übrigen zählen als „übersprungen“.
 - Bereits importierte Notizen (gleiche `importSource` im Bestand) werden übersprungen und **nicht** in einen anderen Ordner verschoben.

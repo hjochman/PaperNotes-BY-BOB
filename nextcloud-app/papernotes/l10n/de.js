@@ -11,7 +11,9 @@ OC.L10N.register(
         "von": "von",
         "PDF Download": "PDF Download",
         "Schließen": "Schließen",
-        "Seiten": "Seiten"
+        "Seiten": "Seiten",
+        "PaperNote": "PaperNote",
+        "PaperNotes Notiz": "PaperNotes Notiz"
     },
     "nplurals=2; plural=(n != 1);"
 );

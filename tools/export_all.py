@@ -3,7 +3,8 @@
 
 Nur Standardbibliothek. Es wird nichts in HiNote veraendert oder geloescht, auch nichts auf dem Tablet.
 
-Voraussetzung: Tablet entsperrt, Bildschirm an, HiNote 12.4.3 installiert, USB-Debugging an.
+Voraussetzung: Tablet entsperrt, Bildschirm an, HiNote 12.4.3 installiert, USB-Debugging an, HiNote in der Kachelansicht
+(Schalter `toolbar_list` oben rechts; in der Listenansicht findet das Skript keine Karten).
 
 Befehle:
   export_all.py run  [--only ORDNER] [--root-only] [--limit N] [--dry-run] [--no-pull]

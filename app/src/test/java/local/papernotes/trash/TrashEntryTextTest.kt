@@ -16,6 +16,14 @@ class TrashEntryTextTest {
     }
 
     @Test
+    fun detailsPlacesExpiryAfterDeletedDate() {
+        assertEquals(
+            "Schule · 6. Oktober · ab 5. November · 3 Seiten",
+            TrashEntryText.details("Schule", "6. Oktober", "3 Seiten", "ab 5. November"),
+        )
+    }
+
+    @Test
     fun detailsSkipsBlankParts() {
         assertEquals("Schule · 3 Seiten", TrashEntryText.details("Schule", "", "3 Seiten"))
         assertEquals("", TrashEntryText.details("", " ", ""))

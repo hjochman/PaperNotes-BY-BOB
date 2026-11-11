@@ -31,8 +31,8 @@ data class TrashedNote(
  * Dateiablage unter [rootDir]: Ordner = Verzeichnisse, Notiz = `<id>.pnote` (Titel steht nur im Manifest,
  * Umbenennen verschiebt also keine Datei). Gelöschte Notizen landen in `.trash/` und lassen sich mit
  * [listTrash], [restoreFromTrash], [deleteFromTrash], [emptyTrash] und [trashCount] verwalten.
- * Automatische Sicherungskopien liegen unter `.backup/` und werden wie `.trash` von allen Listen/Suchen ignoriert
- * und bei Papierkorb-Aktionen bewusst nicht gelöscht.
+ * Automatische Sicherungskopien liegen unter `.backup/` und werden wie `.trash` von allen Listen/Suchen ignoriert.
+ * Dieses Repository fasst sie nicht an; das endgültige Löschen samt Sicherungen übernimmt [TrashService].
  *
  * Ordnerpfad: Das Manifest ist die Quelle der Wahrheit, das Verzeichnis spiegelt ihn. Bei Abweichung gewinnt das Manifest
  * NICHT automatisch; [move] und [renameFolder] ändern deshalb beides gemeinsam, [save] legt die Datei immer
@@ -191,6 +191,9 @@ class NoteRepository(rootDir: File, private val clock: () -> Long = System::curr
         }
         PnoteResult.Ok(items.sortedWith(compareByDescending<TrashedNote> { it.deleted }.thenBy { it.entryName }))
     }
+
+    /** Dateinamen aller Papierkorb-Einträge (auch defekter), siehe [TrashedNote.entryName]. */
+    fun trashEntryNames(): List<String> = synchronized(lock) { trashEntries().map { it.name } }
 
     /** Anzahl der in [listTrash] sichtbaren Notizen. */
     fun trashCount(): Int = synchronized(lock) { listTrash().valueOrNull()?.size ?: 0 }

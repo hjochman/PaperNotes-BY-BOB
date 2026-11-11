@@ -113,7 +113,7 @@
             zoomOut: 'Verkleinern (-)',
             zoomIn: 'Vergrößern (+)',
             fit: 'Anpassen',
-            fitTitle: 'An Fenster anpassen',
+            fitTitle: 'An Fensterbreite anpassen',
             pdfTitle: 'Als PDF herunterladen',
             pdfButton: 'PDF herunterladen',
             pagesHeader: 'Seiten ({total})',
@@ -136,7 +136,7 @@
             zoomOut: 'Zoom out (-)',
             zoomIn: 'Zoom in (+)',
             fit: 'Fit',
-            fitTitle: 'Fit to window',
+            fitTitle: 'Fit to window width',
             pdfTitle: 'Download as PDF',
             pdfButton: 'Download PDF',
             pagesHeader: 'Pages ({total})',
@@ -951,7 +951,7 @@
             this.fileId = null;
             this.currentPageIndex = 0;
             this.zoomScale = 1.0;
-            this.fitMode = 'fit-window'; // 'fit-window', 'fit-width', '100%'
+            this.fitMode = 'fit-width'; // 'fit-width' (page width = window width, scroll vertically), 'custom', '100%'
             this.isSidebarOpen = true;
             this.modalEl = null;
             this.canvasEl = null;
@@ -1205,8 +1205,8 @@
             this.renderAudioPanel(page);
 
             // Apply fit mode on page switch if set
-            if (this.fitMode === 'fit-window') {
-                this.calculateFitScale(width, height);
+            if (this.fitMode === 'fit-width') {
+                this.calculateFitScale(width);
             }
 
             const dpr = window.devicePixelRatio || 1.0;
@@ -1310,25 +1310,22 @@
                 card.appendChild(thumbCanvas);
                 card.appendChild(label);
 
-                card.addEventListener('click', () => {
-                    this.currentPageIndex = index;
-                    this.renderCurrentPage();
-                });
+                card.addEventListener('click', () => this.goToPage(index));
 
                 container.appendChild(card);
             });
         }
 
-        calculateFitScale(pageW, pageH) {
+        /** Fits the page width to the viewport (minus its padding); a long page is then scrolled vertically. */
+        calculateFitScale(pageW) {
             const viewport = document.getElementById('pn-viewport');
             if (!viewport) return;
-            const vw = viewport.clientWidth - 40;
-            const vh = viewport.clientHeight - 40;
-            if (vw <= 0 || vh <= 0) return;
+            const style = window.getComputedStyle(viewport);
+            const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+            const vw = viewport.clientWidth - padding;
+            if (vw <= 0) return;
 
-            const scaleW = vw / pageW;
-            const scaleH = vh / pageH;
-            this.zoomScale = Math.min(scaleW, scaleH, 1.5);
+            this.zoomScale = Math.min(vw / pageW, 1.5);
         }
 
         setZoom(scale) {
@@ -1338,27 +1335,36 @@
         }
 
         toggleFit() {
-            if (this.fitMode === 'fit-window') {
+            if (this.fitMode === 'fit-width') {
                 this.fitMode = '100%';
                 this.zoomScale = 1.0;
             } else {
-                this.fitMode = 'fit-window';
+                this.fitMode = 'fit-width';
             }
             this.renderCurrentPage();
         }
 
+        /** Shows another page, scrolled to its top. */
+        goToPage(index) {
+            this.currentPageIndex = index;
+            this.renderCurrentPage();
+            const viewport = document.getElementById('pn-viewport');
+            if (viewport) {
+                viewport.scrollTop = 0;
+                viewport.scrollLeft = 0;
+            }
+        }
+
         prevPage() {
             if (this.currentPageIndex > 0) {
-                this.currentPageIndex--;
-                this.renderCurrentPage();
+                this.goToPage(this.currentPageIndex - 1);
             }
         }
 
         nextPage() {
             const pageIds = this.note.manifest?.pageIds || Object.keys(this.note.pages || {});
             if (this.currentPageIndex < pageIds.length - 1) {
-                this.currentPageIndex++;
-                this.renderCurrentPage();
+                this.goToPage(this.currentPageIndex + 1);
             }
         }
 
@@ -1412,7 +1418,7 @@
         }
 
         onResize() {
-            if (this.fitMode === 'fit-window') {
+            if (this.fitMode === 'fit-width') {
                 this.renderCurrentPage();
             }
         }

@@ -7,6 +7,10 @@ Ermöglicht das direkte Betrachten von `.pnote`-Notizbüchern im Nextcloud-Webbr
 
 ## Funktionen
 
+- **Dateityp & MIME-Type Integration:**
+  - Erkennt `.pnote`-Dateien nativ als MIME-Type `application/x-papernotes`.
+  - Zeigt den Dateityp in Dateilisten, Kacheln und der Detail-Seitenleiste durchgängig als **PaperNote** mit eigenem Notizbuch-Icon an.
+  - SabreDAV-Plugin liefert den menschenlesbaren Notiztitel als `{DAV:}displayname` und `application/x-papernotes` als Content-Type.
 - **Dateiaktion für `.pnote`:**
   - Standard-Klickaktion: Öffnet das Notizbuch direkt im interaktiven Web-Viewer.
   - Drei-Punkte-Menü `...`: „In PaperNotes öffnen“ und „Als PDF herunterladen“.
@@ -56,14 +60,18 @@ nextcloud-app/
 └── papernotes/                    # Das installierbare Nextcloud-App-Paket
     ├── appinfo/
     │   ├── info.xml               # App-Metadaten, Version, Abhängigkeiten (NC 27–36)
+    │   ├── mimetypealiases.json   # Zuordnung des MIME-Types zum Dateityp-Icon
+    │   ├── mimetypelist.js        # Registrierung des MIME-Types und Namens im Frontend
+    │   ├── mimetypemapping.json   # Zuordnung der Dateiendung .pnote zu application/x-papernotes
+    │   ├── mimetypenames.json      # Klartext-Anzeigename "PaperNote" für den MIME-Type
     │   └── routes.php             # REST-API- und Viewer-Routen
     ├── css/
-    │   └── papernotes.css         # Styling für Viewer-Modal, Toolbar, Sidebar, Thumbnails
+    │   └── papernotes.css         # Styling für Viewer-Modal, Toolbar, Sidebar, Thumbnails & Icons
     ├── img/
     │   ├── app.svg                # App-Icon
     │   └── pnote.svg              # Dateityp-Icon für .pnote
     ├── js/
-    │   ├── papernotes-main.js     # Registrierung von Dateiaktionen & OCA.Viewer
+    │   ├── papernotes-main.js     # Registrierung von Dateiaktionen, MIME-Type & OCA.Viewer
     │   └── papernotes-viewer.js   # Interaktiver Canvas-Viewer & Vorlagen-Renderer
     ├── l10n/
     │   ├── de.json / de.js        # Deutsche Übersetzung
@@ -71,19 +79,24 @@ nextcloud-app/
     ├── lib/
     │   ├── AppInfo/
     │   │   └── Application.php    # App-Bootstrap, Event-Registrierung & MIME-Type
+    │   ├── Connector/
+    │   │   └── Sabre/
+    │   │       └── SabrePlugin.php # SabreDAV WebDAV-Plugin für Titel & Content-Type
     │   ├── Controller/
     │   │   ├── NoteController.php # Endpunkte: Notiz-JSON, Vorschau, PDF-Download
     │   │   └── ViewerController.php # Standalone-Vollbild-Ansicht
     │   ├── Listener/
-    │   │   └── LoadScriptsListener.php # Einbindung von JS/CSS in Nextcloud Files & Viewer
+    │   │   ├── LoadScriptsListener.php # Einbindung von JS/CSS in Nextcloud Files & Viewer
+    │   │   └── SabreListener.php       # Registrierung des SabreDAV-Plugins
     │   └── Service/
     │       ├── PdfExportService.php    # Vektor-PDF-Generator für alle 21 Vorlagen
+    │       ├── PdfTextRenderer.php     # Textbox-Rendering & Schriftbreitenberechnung
     │       ├── PnoteParserService.php  # Sicherer .pnote ZIP- & JSON-Parser
     │       └── PnoteStorageService.php # Speicher- und Zugriffsrechteverwaltung
     ├── templates/
     │   └── viewer.php             # Template für Direktansicht
     └── tests/
-        └── run_tests.php          # Eigenständige Testsuite (96 Tests)
+        └── run_tests.php          # Eigenständige Testsuite (98 Tests)
 ```
 
 ---
@@ -100,7 +113,7 @@ Kopieren Sie den Ordner `papernotes` in das `apps/`-Verzeichnis Ihrer Nextcloud-
 
 ```bash
 # Beispiel per SCP/Rsync:
-rsync -avz nextcloud-app/papernotes/ user@nextcloud-server:/var/www/html/nextcloud/apps/papernotes/
+rsync -avz --delete nextcloud-app/papernotes/ user@nextcloud-server:/var/www/html/nextcloud/apps/papernotes/
 ```
 
 ### 2. Dateirechte anpassen
@@ -112,16 +125,20 @@ sudo chown -R www-data:www-data /var/www/html/nextcloud/apps/papernotes
 sudo chmod -R 755 /var/www/html/nextcloud/apps/papernotes
 ```
 
-### 3. App aktivieren
+### 3. App aktivieren & MIME-Types aktualisieren
 
-Aktivieren Sie die App über die Nextcloud-Kommandozeile (`occ`):
+Aktivieren Sie die App über die Nextcloud-Kommandozeile (`occ`) und aktualisieren Sie die Mimetype-Registry:
 
 ```bash
 # Mit sudo:
 sudo -u www-data php /var/www/html/nextcloud/occ app:enable papernotes
+sudo -u www-data php /var/www/html/nextcloud/occ maintenance:mimetype:update-db
+sudo -u www-data php /var/www/html/nextcloud/occ maintenance:mimetype:update-js
 
 # Oder als root mit su:
 su -s /bin/sh www-data -c 'php /var/www/html/nextcloud/occ app:enable papernotes'
+su -s /bin/sh www-data -c 'php /var/www/html/nextcloud/occ maintenance:mimetype:update-db'
+su -s /bin/sh www-data -c 'php /var/www/html/nextcloud/occ maintenance:mimetype:update-js'
 ```
 
 *Alternativ:* Im Nextcloud-Webmenü unter **Administrationseinstellungen → Apps → Deaktivierte Apps** nach **PaperNotes** suchen und auf **Aktivieren** klicken.
@@ -155,12 +172,14 @@ Ausgabe:
   [PASS] Security: Limit max entries in ZIP
   [PASS] Security: Limit entry size > 16MB
   [PASS] Security: Reject future format version 999
+  [PASS] Format: Reject version 0
+  [PASS] Format: Reject version 1
   [PASS] All 21 Templates: German PDF generation succeeded
   [PASS] All 21 Templates: 21 pages present in PDF
   [PASS] All 21 Templates: English PDF generation succeeded
   [PASS] Preview: Extracted preview.jpg faithfully
-
-================================================
+  ...
+===============================================
 Results: 98 passed, 0 failed
 ```
 

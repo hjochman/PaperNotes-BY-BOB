@@ -16,6 +16,8 @@ import local.papernotes.storage.BackupPolicy
 import local.papernotes.storage.BackupStore
 import local.papernotes.storage.NoteRepository
 import local.papernotes.storage.PnoteResult
+import local.papernotes.storage.TrashPolicy
+import local.papernotes.storage.TrashService
 import local.papernotes.sync.SyncSettingsActivity
 import local.papernotes.sync.SyncSummary
 import local.papernotes.trash.TrashActivity
@@ -24,7 +26,7 @@ import java.util.concurrent.Executors
 
 /**
  * Einstellungen: Speicherort (nur Anzeige), Automatische Sicherung (Intervall, Übersicht, Löschen),
- * Papierkorb (Anzahl, Ansicht, leeren) und Version. Die Sprache folgt dem System.
+ * Papierkorb (Anzahl, Ansicht, leeren, Löschfrist) und Version. Die Sprache folgt dem System.
  * Dateizugriffe laufen nie im UI-Thread.
  */
 class SettingsActivity : Activity() {
@@ -39,6 +41,8 @@ class SettingsActivity : Activity() {
     private lateinit var textTrashCount: TextView
     private lateinit var rowTrash: View
     private lateinit var rowEmptyTrash: View
+    private lateinit var rowTrashRetention: View
+    private lateinit var textTrashRetention: TextView
 
     private var backupCount = 0
     private var backupSizeBytes = 0L
@@ -57,6 +61,8 @@ class SettingsActivity : Activity() {
         textTrashCount = findViewById(R.id.textTrashCount)
         rowTrash = findViewById(R.id.rowTrash)
         rowEmptyTrash = findViewById(R.id.rowEmptyTrash)
+        rowTrashRetention = findViewById(R.id.rowTrashRetention)
+        textTrashRetention = findViewById(R.id.textTrashRetention)
 
         findViewById<ImageButton>(R.id.buttonBack).setOnClickListener { finish() }
         findViewById<TextView>(R.id.textLocation).text = NotesLocation.location().absolutePath
@@ -69,11 +75,13 @@ class SettingsActivity : Activity() {
         findViewById<View>(R.id.rowSync).setOnClickListener { startActivity(Intent(this, SyncSettingsActivity::class.java)) }
         rowTrash.setOnClickListener { startActivity(Intent(this, TrashActivity::class.java)) }
         rowEmptyTrash.setOnClickListener { if (trashCount > 0) askEmptyTrash() }
+        rowTrashRetention.setOnClickListener { showTrashRetentionDialog() }
         findViewById<View>(R.id.rowAbout).setOnClickListener { startActivity(Intent(this, AboutActivity::class.java)) }
 
         updateBackupIntervalUi()
         updateBackupStatsUi()
         updateTrashUi()
+        updateTrashRetentionUi()
     }
 
     override fun onResume() {
@@ -224,14 +232,45 @@ class SettingsActivity : Activity() {
             getString(R.string.trash_empty_message),
             getString(R.string.trash_empty_confirm),
         ) {
-            val repo = NoteRepository(NotesLocation.root(this))
+            val root = NotesLocation.root(this)
             io.execute {
-                val ok = repo.emptyTrash() is PnoteResult.Ok
+                val ok = TrashService(NoteRepository(root), BackupStore(root)).emptyTrash() is PnoteResult.Ok
                 runOnUiThread {
                     if (isDestroyed) return@runOnUiThread
                     if (!ok) Toast.makeText(this, R.string.error_action_failed, Toast.LENGTH_SHORT).show()
                     refreshTrashCount()
+                    refreshBackupStats()
                 }
+            }
+        }
+    }
+
+    private fun getTrashRetentionDays(): Int =
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getInt(TrashPolicy.PREF_KEY_RETENTION_DAYS, TrashPolicy.DEFAULT_RETENTION_DAYS)
+
+    private fun formatRetentionLabel(days: Int): String = when (days) {
+        TrashPolicy.RETENTION_NEVER -> getString(R.string.trash_retention_never)
+        TrashPolicy.DEFAULT_RETENTION_DAYS -> getString(R.string.trash_retention_default, days)
+        else -> resources.getQuantityString(R.plurals.trash_retention_days, days, days)
+    }
+
+    private fun updateTrashRetentionUi() {
+        textTrashRetention.text = formatRetentionLabel(getTrashRetentionDays())
+    }
+
+    private fun showTrashRetentionDialog() {
+        val options = TrashPolicy.RETENTION_OPTIONS
+        val current = getTrashRetentionDays()
+        val selectedIdx = options.indexOf(current).let { if (it >= 0) it else options.indexOf(TrashPolicy.DEFAULT_RETENTION_DAYS) }
+        EinkDialog.singleChoice(
+            this,
+            getString(R.string.trash_retention_title),
+            options.map { formatRetentionLabel(it) },
+            selectedIdx,
+        ) { idx ->
+            if (idx in options.indices) {
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit { putInt(TrashPolicy.PREF_KEY_RETENTION_DAYS, options[idx]) }
+                updateTrashRetentionUi()
             }
         }
     }
