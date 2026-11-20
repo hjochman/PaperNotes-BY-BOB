@@ -3,8 +3,10 @@ package local.papernotes.editor
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.media.MediaPlayer
@@ -16,11 +18,14 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.graphics.Rect
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.PopupWindow
 import android.widget.SeekBar
@@ -28,6 +33,7 @@ import android.widget.TextView
 import android.widget.Toast
 import local.papernotes.NotesLocation
 import local.papernotes.R
+import local.papernotes.SettingsActivity
 import local.papernotes.export.AudioExport
 import local.papernotes.export.ExportFlow
 import local.papernotes.home.PreviewStamper
@@ -58,6 +64,8 @@ class EditorActivity : Activity() {
     private var session: NoteSession? = null
     private var keyboardListener: ViewTreeObserver.OnGlobalLayoutListener? = null
     private lateinit var tools: EditorToolState
+    private val stylusGesture = StylusGestureLogic()
+    private var stylusMotionButtonDown = false
 
     private var lastBackupTime = 0L
     private var modifiedSinceBackup = false
@@ -82,6 +90,15 @@ class EditorActivity : Activity() {
     private lateinit var buttonRedo: View
 
     private lateinit var toolBar: View
+    private lateinit var headerBar: View
+    private lateinit var headerDivider: View
+    private lateinit var compactExtras: View
+    private lateinit var buttonToggleBar: ImageButton
+    private lateinit var textCompactPage: TextView
+    private lateinit var buttonCompactPrev: View
+    private lateinit var buttonCompactNext: View
+    private lateinit var buttonCompactUndo: View
+    private lateinit var buttonCompactRedo: View
     private lateinit var popupView: View
     private lateinit var popup: PopupWindow
     private lateinit var buttonPin: View
@@ -128,6 +145,8 @@ class EditorActivity : Activity() {
     }
 
     private val toolButtons = HashMap<PageCanvasView.Tool, View>()
+    private lateinit var buttonStylusTap: View
+    private lateinit var badgeEraserStylus: ImageView
     private val penButtons = HashMap<String, View>()
     private val colorButtons = HashMap<PenColor, View>()
     private val eraserButtons = HashMap<PageCanvasView.EraserStyle, View>()
@@ -151,7 +170,7 @@ class EditorActivity : Activity() {
         applyPen()
         applyEraser()
         canvas.setTool(tools.tool)
-        refreshToolUi()
+        refreshCompact()
         // Bis die Notiz geladen und angezeigt ist, nicht schreiben: showPage setzt die Striche der Stiftschicht neu
         // (setTrackList/clear) und würde einen schon begonnenen Strich löschen.
         loadLockHeld = true
@@ -189,6 +208,19 @@ class EditorActivity : Activity() {
     private fun bindViews() {
         canvas = findViewById(R.id.pageCanvas)
         toolBar = findViewById(R.id.toolBar)
+        headerBar = findViewById(R.id.headerBar)
+        headerDivider = findViewById(R.id.headerDivider)
+        compactExtras = findViewById(R.id.compactExtras)
+        buttonToggleBar = findViewById(R.id.buttonToggleBar)
+        textCompactPage = findViewById(R.id.textCompactPage)
+        buttonCompactPrev = findViewById(R.id.buttonCompactPrev)
+        buttonCompactNext = findViewById(R.id.buttonCompactNext)
+        buttonCompactUndo = findViewById(R.id.buttonCompactUndo)
+        buttonCompactRedo = findViewById(R.id.buttonCompactRedo)
+        buttonToggleBar.setOnClickListener {
+            tools.toggleCompact()
+            refreshCompact()
+        }
         // Stift-/Radierer-Leiste als eigenes Fenster über dem Blatt (nicht fokussierbar, Stift-Eingaben daneben gehen durch).
         popupView = layoutInflater.inflate(R.layout.popup_bars, null)
         popup = PopupWindow(popupView, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
@@ -209,6 +241,20 @@ class EditorActivity : Activity() {
         textZoom.text = getString(R.string.zoom_percent, 100)
         // Nur bei Änderung der Stufe neu zeichnen, damit E-Ink ruhig bleibt.
         canvas.onZoomChanged = { percent -> textZoom.text = getString(R.string.zoom_percent, percent) }
+        canvas.onPenDown = {
+            ui.removeCallbacks(autoReturnRunnable)
+        }
+        canvas.onPenLifted = {
+            if (tools.tool == PageCanvasView.Tool.ERASER && tools.stylusGesture.autoReturnEnabled) {
+                ui.removeCallbacks(autoReturnRunnable)
+                val delay = tools.stylusGesture.autoReturnDelayMs
+                if (delay <= 0L) {
+                    performAutoReturn()
+                } else {
+                    ui.postDelayed(autoReturnRunnable, delay)
+                }
+            }
+        }
         findViewById<View>(R.id.buttonZoomOut).setOnClickListener { canvas.zoomOut() }
         findViewById<View>(R.id.buttonZoomIn).setOnClickListener { canvas.zoomIn() }
         buttonPrev = findViewById(R.id.buttonPrevPage)
@@ -327,10 +373,18 @@ class EditorActivity : Activity() {
         })
 
         findViewById<View>(R.id.buttonBack).setOnClickListener { finish() }
-        buttonPrev.setOnClickListener { switchPage { it.goToPage(it.pageIndex - 1) } }
-        buttonNext.setOnClickListener { switchPage { it.goToPage(it.pageIndex + 1) } }
-        buttonUndo.setOnClickListener { canvas.undo(); updateChrome() }
-        buttonRedo.setOnClickListener { canvas.redo(); updateChrome() }
+        for (button in listOf(buttonPrev, buttonCompactPrev)) {
+            button.setOnClickListener { switchPage { it.goToPage(it.pageIndex - 1) } }
+        }
+        for (button in listOf(buttonNext, buttonCompactNext)) {
+            button.setOnClickListener { switchPage { it.goToPage(it.pageIndex + 1) } }
+        }
+        for (button in listOf(buttonUndo, buttonCompactUndo)) {
+            button.setOnClickListener { canvas.undo(); updateChrome() }
+        }
+        for (button in listOf(buttonRedo, buttonCompactRedo)) {
+            button.setOnClickListener { canvas.redo(); updateChrome() }
+        }
         for (id in intArrayOf(R.id.buttonAddPage, R.id.buttonToolPageAdd)) {
             findViewById<View>(id).setOnClickListener { switchPage { it.addPage(); true } }
         }
@@ -347,11 +401,26 @@ class EditorActivity : Activity() {
         toolButtons[PageCanvasView.Tool.AUDIO] = findViewById(R.id.buttonMic)
         for ((tool, button) in toolButtons) {
             button.setOnClickListener {
+                cancelPendingStylusActions()
+                stylusGesture.cancel() // Manueller Wechsel verwirft eine laufende Stift-Geste.
                 tools.selectTool(tool)
                 if (tools.tool != PageCanvasView.Tool.AUDIO) stopAudio()
                 canvas.setTool(tools.tool)
                 refreshToolUi()
             }
+        }
+
+        badgeEraserStylus = findViewById(R.id.badgeEraserStylus)
+        buttonStylusTap = popupView.findViewById(R.id.buttonEraserStylusTap)
+        buttonStylusTap.setOnClickListener {
+            cancelPendingStylusActions()
+            stylusGesture.cancel() // Laufende Geste verwerfen, damit kein halber Zustand zurückbleibt.
+            tools.setStylusGestureEnabled(!tools.stylusGesture.enabled)
+            refreshToolUi()
+        }
+        buttonStylusTap.setOnLongClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+            true
         }
 
         // Reihenfolge der Ids entspricht PenCatalog.pens (Füllfeder, Kugelschreiber, Bleistift, Marker).
@@ -430,9 +499,31 @@ class EditorActivity : Activity() {
         canvas.setEraser(tools.eraserStyle, tools.eraserRadius)
     }
 
+    /**
+     * Kompakte Ansicht: Kopfzeile weg, Seitenwechsel und Rück/Vor wandern in die Werkzeugzeile. Die Popup-Leiste hängt
+     * unter der Werkzeugzeile und rückt mit, daher danach neu positionieren.
+     */
+    private fun refreshCompact() {
+        val compact = tools.compact
+        headerBar.visibility = if (compact) View.GONE else View.VISIBLE
+        headerDivider.visibility = if (compact) View.GONE else View.VISIBLE
+        compactExtras.visibility = if (compact) View.VISIBLE else View.GONE
+        buttonToggleBar.setImageResource(if (compact) R.drawable.ic_bar_expand else R.drawable.ic_bar_collapse)
+        buttonToggleBar.contentDescription = getString(if (compact) R.string.bar_expand else R.string.bar_collapse)
+        // Kompakt: nur so hoch wie die Symbole (24dp), ohne Leerraum darüber und darunter.
+        toolBar.layoutParams = toolBar.layoutParams.apply {
+            height = resources.getDimensionPixelSize(if (compact) R.dimen.editor_toolbar_compact_height else R.dimen.editor_toolbar_height)
+        }
+        if (popup.isShowing) popup.dismiss()
+        refreshToolUi()
+    }
+
     /** Aktualisiert Auswahlzustand und Sichtbarkeit der Unterleiste. Ändert nie die Größe der Schreibfläche. */
     private fun refreshToolUi() {
         for ((tool, button) in toolButtons) button.isSelected = tool == tools.tool
+        val stylusEnabled = tools.stylusGesture.enabled
+        buttonStylusTap.isSelected = stylusEnabled
+        badgeEraserStylus.visibility = if (stylusEnabled) View.VISIBLE else View.GONE
         val showPen = tools.barVisible && tools.tool == PageCanvasView.Tool.PEN
         val showEraser = tools.barVisible && tools.tool == PageCanvasView.Tool.ERASER
         val showLasso = tools.barVisible && tools.tool == PageCanvasView.Tool.LASSO
@@ -950,10 +1041,15 @@ class EditorActivity : Activity() {
     private fun updateChrome() {
         val s = session ?: return
         textPage.text = s.currentPageNumberText()
+        textCompactPage.text = textPage.text
         buttonPrev.isEnabled = s.pageIndex > 0
         buttonNext.isEnabled = s.pageIndex < s.pageCount - 1
         buttonUndo.isEnabled = canvas.canUndo
         buttonRedo.isEnabled = canvas.canRedo
+        buttonCompactPrev.isEnabled = buttonPrev.isEnabled
+        buttonCompactNext.isEnabled = buttonNext.isEnabled
+        buttonCompactUndo.isEnabled = buttonUndo.isEnabled
+        buttonCompactRedo.isEnabled = buttonRedo.isEnabled
     }
 
     private fun setEnabledAll(enabled: Boolean) {
@@ -1022,7 +1118,12 @@ class EditorActivity : Activity() {
 
     override fun onPause() {
         super.onPause()
+        if (stylusReceiverRegistered) {
+            try { unregisterReceiver(stylusBroadcastReceiver) } catch (_: Exception) {}
+            stylusReceiverRegistered = false
+        }
         SyncCoordinator.editing = false
+        if (::tools.isInitialized) releaseStylusButton() // Ein verpasstes Loslassen darf den Radierer nicht festhalten.
         if (::popup.isInitialized && popup.isShowing) popup.dismiss()
         stopAudio(blockingRecording = true)
         persist()
@@ -1075,9 +1176,148 @@ class EditorActivity : Activity() {
         checkAndRunBackup(isClosing = true)
     }
 
+    // ---------------------------------------------------------------- Stift-Taste (M-Pencil)
+
+    private fun isStylusButtonKey(keyCode: Int): Boolean = keyCode == KeyEvent.KEYCODE_STYLUS_BUTTON_PRIMARY ||
+        keyCode == KeyEvent.KEYCODE_STYLUS_BUTTON_SECONDARY ||
+        keyCode == KeyEvent.KEYCODE_STYLUS_BUTTON_TERTIARY ||
+        keyCode == KeyEvent.KEYCODE_STYLUS_BUTTON_TAIL
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (::tools.isInitialized && ::canvas.isInitialized && isStylusButtonKey(event.keyCode)) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> stylusButtonDown(event.eventTime)
+                KeyEvent.ACTION_UP -> stylusButtonUp(event.eventTime)
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        trackStylusMotion(event)
+        return super.dispatchTouchEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        trackStylusMotion(event) // Schweben des Stifts über dem Blatt (Hover) mit gedrückter Taste.
+        return super.dispatchGenericMotionEvent(event)
+    }
+
+    /** Wertet den Tastenzustand von Stift-Ereignissen aus; die Ereignisse selbst werden nie verbraucht. */
+    private fun trackStylusMotion(event: MotionEvent) {
+        if (!::tools.isInitialized || !::canvas.isInitialized || event.pointerCount == 0) return
+        if (event.getToolType(0) != MotionEvent.TOOL_TYPE_STYLUS) return
+        val mask = MotionEvent.BUTTON_STYLUS_PRIMARY or MotionEvent.BUTTON_STYLUS_SECONDARY
+        val down = event.action != MotionEvent.ACTION_HOVER_EXIT && (event.buttonState and mask) != 0
+        if (down == stylusMotionButtonDown) return
+        stylusMotionButtonDown = down
+        if (down) stylusButtonDown(event.eventTime) else stylusButtonUp(event.eventTime)
+    }
+
+    private var stylusReceiverRegistered = false
+    private val stylusBroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val action = intent?.action ?: return
+            if (action == "com.huawei.stylus.action.BUTTON_DOUBLE_PRESSED") {
+                stylusDoubleTap(SystemClock.uptimeMillis())
+            }
+        }
+    }
+
+    private var pendingDoubleTapAction: StylusGestureAction? = null
+    private val pendingDoubleTapRunnable = Runnable {
+        val action = pendingDoubleTapAction ?: return@Runnable
+        pendingDoubleTapAction = null
+        stylusGesture.commitScheduledToggle(SystemClock.uptimeMillis(), action)
+        applyStylusAction(action, refresh = true)
+    }
+
+    private val burstResetRunnable = Runnable {
+        stylusGesture.resetBurstState()
+    }
+
+    private val autoReturnRunnable = Runnable {
+        performAutoReturn()
+    }
+
+    private fun cancelPendingStylusActions() {
+        ui.removeCallbacks(pendingDoubleTapRunnable)
+        pendingDoubleTapAction = null
+        ui.removeCallbacks(burstResetRunnable)
+        ui.removeCallbacks(autoReturnRunnable)
+    }
+
+    private fun performAutoReturn() {
+        if (!::tools.isInitialized || !::canvas.isInitialized) return
+        if (tools.tool != PageCanvasView.Tool.ERASER) return
+        val snapshot = stylusGesture.getSavedPenOrCurrent(tools.penSnapshot())
+        tools.restorePen(snapshot)
+        applyPen()
+        canvas.setTool(PageCanvasView.Tool.PEN)
+        refreshToolUi()
+    }
+
+    private fun stylusDoubleTap(time: Long) {
+        if (!::tools.isInitialized || !::canvas.isInitialized) return
+        stylusGesture.config = tools.stylusGesture
+        when (val decision = stylusGesture.onDoubleTapEvent(time, tools.tool, tools.penSnapshot())) {
+            is DoubleTapDecision.ExecuteNow -> {
+                cancelPendingStylusActions()
+                applyStylusAction(decision.action, refresh = true)
+            }
+            is DoubleTapDecision.Schedule -> {
+                ui.removeCallbacks(pendingDoubleTapRunnable)
+                pendingDoubleTapAction = decision.action
+                ui.postDelayed(pendingDoubleTapRunnable, decision.delayMs)
+            }
+            is DoubleTapDecision.CancelPending -> {
+                ui.removeCallbacks(pendingDoubleTapRunnable)
+                pendingDoubleTapAction = null
+                ui.removeCallbacks(burstResetRunnable)
+                ui.postDelayed(burstResetRunnable, tools.stylusGesture.burstWindowMs)
+            }
+            DoubleTapDecision.Ignored -> Unit
+        }
+    }
+
+    private fun stylusButtonDown(time: Long) {
+        stylusDoubleTap(time)
+    }
+
+    private fun stylusButtonUp(time: Long) = Unit
+
+    private fun releaseStylusButton() {
+        stylusMotionButtonDown = false
+        cancelPendingStylusActions()
+    }
+
+    /** Wechselt Werkzeug und Zeichenschicht; [refresh] aktualisiert zusätzlich Werkzeugzeile und Unterleiste. */
+    private fun applyStylusAction(action: StylusGestureAction, refresh: Boolean) {
+        when (action) {
+            StylusGestureAction.None -> return
+            StylusGestureAction.SwitchToEraser -> {
+                tools.switchToEraserKeepingBar()
+                applyEraser()
+                canvas.setTool(PageCanvasView.Tool.ERASER)
+            }
+            is StylusGestureAction.RestorePen -> {
+                tools.restorePen(action.snapshot)
+                applyPen()
+                canvas.setTool(PageCanvasView.Tool.PEN)
+            }
+        }
+        if (refresh) refreshToolUi()
+    }
+
     override fun onResume() {
         super.onResume()
         SyncCoordinator.editing = true // während des Schreibens kein Hochladen (Stiftlatenz, Akku)
+        if (!stylusReceiverRegistered) {
+            val filter = IntentFilter("com.huawei.stylus.action.BUTTON_DOUBLE_PRESSED")
+            registerReceiver(stylusBroadcastReceiver, filter)
+            stylusReceiverRegistered = true
+        }
         if (::tools.isInitialized && ::popup.isInitialized) refreshToolUi()
     }
 
@@ -1129,7 +1369,7 @@ class EditorActivity : Activity() {
         private const val AUDIO_SAMPLE_RATE = 44_100
         private const val AUDIO_BIT_RATE = 64_000
         private const val AUDIO_SIZE_MARGIN = 256L * 1024
-        private const val PREFS_NAME = "editor_tools"
+        const val PREFS_NAME = "editor_tools"
         private const val PREFS_SETTINGS = "settings"
         private const val BACKUP_TICK_MS = 10_000L
 
@@ -1141,6 +1381,7 @@ class EditorActivity : Activity() {
         private val CONTROL_IDS = intArrayOf(
             R.id.buttonZoomOut, R.id.buttonZoomIn, R.id.buttonPrevPage, R.id.buttonNextPage, R.id.buttonUndo, R.id.buttonRedo, R.id.buttonAddPage,
             R.id.buttonToolPageAdd, R.id.buttonDeletePage, R.id.buttonTemplate, R.id.buttonSidebar,
+            R.id.buttonCompactPrev, R.id.buttonCompactNext, R.id.buttonCompactUndo, R.id.buttonCompactRedo,
         )
 
         fun intent(context: Context, noteId: String): Intent =

@@ -100,6 +100,10 @@ class PageCanvasView @JvmOverloads constructor(
     var onZoomChanged: ((Int) -> Unit)? = null
     private var zoomPercent = 100
 
+    /** Wird aufgerufen, wenn die Stiftspitze aufsetzt bzw. abhebt. */
+    var onPenDown: (() -> Unit)? = null
+    var onPenLifted: (() -> Unit)? = null
+
     /** Wird im Bild-Werkzeug bei einem Tippen auf freie Fläche (kein Bild getroffen) aufgerufen: Bildauswahl öffnen. */
     var onRequestImagePick: (() -> Unit)? = null
 
@@ -875,7 +879,10 @@ class PageCanvasView @JvmOverloads constructor(
         val t = ev.eventTime
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN ->
-                if (isPenTool(ev.getToolType(ev.actionIndex))) pen.penDown(t)
+                if (isPenTool(ev.getToolType(ev.actionIndex))) {
+                    pen.penDown(t)
+                    onPenDown?.invoke()
+                }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP ->
                 if (isPenTool(ev.getToolType(ev.actionIndex))) penLifted(t)
             MotionEvent.ACTION_CANCEL -> if (pen.isDown) penLifted(t)
@@ -890,6 +897,7 @@ class PageCanvasView @JvmOverloads constructor(
             transformUpdatePending = false
             post { updateTransform() }
         }
+        onPenLifted?.invoke()
     }
 
     /** Schwebender Stift (Hover) zählt als "Stift im Spiel", damit ein Handballen die Seite nicht verschiebt. */
@@ -1018,6 +1026,8 @@ class PageCanvasView @JvmOverloads constructor(
             return
         }
         updateTransform()
+        // Bei reiner Höhenänderung (Leiste ein-/ausklappen) bleibt die Abbildung gleich, der sichtbare Ausschnitt nicht.
+        updateIndicator()
     }
 
     /** Wechselt nur den Hintergrund der gezeigten Seite; die Striche bleiben unberührt. */

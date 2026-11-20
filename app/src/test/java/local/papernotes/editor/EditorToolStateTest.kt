@@ -95,6 +95,18 @@ class EditorToolStateTest {
     }
 
     @Test
+    fun compactModeIsToggledAndRemembered() {
+        val store = MapStore()
+        val first = EditorToolState(store)
+        assertFalse(first.compact)
+        first.toggleCompact()
+        assertTrue(first.compact)
+        assertTrue(EditorToolState(store).compact)
+        first.toggleCompact()
+        assertFalse(EditorToolState(store).compact)
+    }
+
+    @Test
     fun penWidthIsKeptPerPenAndClamped() {
         val s = EditorToolState(MapStore())
         val ballpoint = PenCatalog.pens.first { it.id == "ballpoint" }

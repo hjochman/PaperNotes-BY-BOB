@@ -148,6 +148,14 @@
                 android:gravity="center"
                 android:textColor="@color/black"
                 android:textSize="18sp" />
+
+            <View style="@style/Widget.PaperNotes.Divider" />
+
+            <ImageButton
+                android:id="@+id/buttonEraserStylusTap"
+                style="@style/Widget.PaperNotes.IconButton"
+                android:contentDescription="@string/tool_stylus_tap"
+                android:src="@drawable/ic_tool_stylus_tap" />
         </LinearLayout>
 
         <LinearLayout

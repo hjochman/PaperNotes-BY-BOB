@@ -32,6 +32,10 @@ class EditorToolState(private val store: ToolSettingsStore) {
 
     val barVisible: Boolean get() = barOpen
 
+    /** Kompakte Ansicht: Kopfzeile entfällt, ihre Knöpfe sitzen in der Werkzeugzeile. Wird gemerkt. */
+    var compact: Boolean = false
+        private set
+
     var lassoSelectInk: Boolean = true
         private set
     var lassoSelectText: Boolean = true
@@ -48,6 +52,10 @@ class EditorToolState(private val store: ToolSettingsStore) {
     var eraserRadius: Int = DEFAULT_ERASER_RADIUS
         private set
 
+    /** Einstellungen der Stift-Geste (Tipp/Halten der Stift-Taste), über [ToolSettingsStore] gemerkt. */
+    var stylusGesture: StylusGestureConfig = StylusGestureConfig()
+        private set
+
     private val penWidths = HashMap<String, Int>()
 
     init {
@@ -59,6 +67,7 @@ class EditorToolState(private val store: ToolSettingsStore) {
             penWidths[spec.id] = spec.clampWidth(store.getInt(KEY_PEN_WIDTH + spec.id, spec.defaultWidth))
         }
         barPinned = store.getInt(KEY_BAR_PINNED, 0) != 0
+        compact = store.getInt(KEY_COMPACT, 0) != 0
         barOpen = barPinned // Ohne Pin startet der Editor mit freiem Blatt.
         eraserStyle = styleOf(store.getInt(KEY_ERASER_STYLE, 0))
         eraserRadius = store.getInt(KEY_ERASER_RADIUS, DEFAULT_ERASER_RADIUS)
@@ -67,6 +76,16 @@ class EditorToolState(private val store: ToolSettingsStore) {
         lassoSelectInk = store.getInt(KEY_LASSO_INK, 1) != 0
         lassoSelectText = store.getInt(KEY_LASSO_TEXT, 1) != 0
         lassoSelectImage = store.getInt(KEY_LASSO_IMAGE, 1) != 0
+
+        stylusGesture = StylusGestureConfig(
+            enabled = store.getInt(KEY_STYLUS_ENABLED, 1) != 0,
+            speed = StylusTapSpeed.fromCode(store.getInt(KEY_STYLUS_SPEED, StylusTapSpeed.NORMAL.code)),
+            burstProtection = store.getInt(KEY_STYLUS_BURST_PROTECTION, 1) != 0,
+            autoReturnDelayMs = store.getInt(KEY_STYLUS_AUTO_RETURN, StylusGestureConfig.DEFAULT_AUTO_RETURN_DELAY_MS.toInt()).toLong(),
+            cooldownMs = store.getInt(KEY_STYLUS_COOLDOWN, StylusGestureConfig.DEFAULT_COOLDOWN_MS.toInt())
+                .toLong()
+                .coerceIn(StylusGestureConfig.MIN_COOLDOWN_MS, StylusGestureConfig.MAX_COOLDOWN_MS),
+        )
     }
 
     val penWidth: Int get() = penWidths.getValue(pen.id)
@@ -97,6 +116,12 @@ class EditorToolState(private val store: ToolSettingsStore) {
     fun setLassoSelectImage(value: Boolean) {
         lassoSelectImage = value
         store.putInt(KEY_LASSO_IMAGE, if (value) 1 else 0)
+    }
+
+    /** Schaltet zwischen normaler und kompakter Ansicht um. */
+    fun toggleCompact() {
+        compact = !compact
+        store.putInt(KEY_COMPACT, if (compact) 1 else 0)
     }
 
     /** Pinnnadel umschalten. Festhalten öffnet die Leiste zugleich. */
@@ -142,6 +167,48 @@ class EditorToolState(private val store: ToolSettingsStore) {
 
     fun stepEraserRadius(delta: Int) = setEraserRadius(eraserRadius + delta)
 
+    /** Aktueller Stiftzustand (Stift, Breite, Farbe) zum späteren Wiederherstellen. */
+    fun penSnapshot(): PenSnapshot = PenSnapshot(pen, penWidth, penColor)
+
+    /** Stellt einen gemerkten Stiftzustand wieder her und wählt das Stift-Werkzeug, ohne die Unterleiste zu verändern. */
+    fun restorePen(snapshot: PenSnapshot) {
+        selectPen(snapshot.pen)
+        setPenWidth(snapshot.width)
+        selectColor(snapshot.color)
+        tool = PageCanvasView.Tool.PEN
+    }
+
+    /** Wählt den Radierer ohne die Unterleiste zu verändern (für die Stift-Geste). */
+    fun switchToEraserKeepingBar() {
+        tool = PageCanvasView.Tool.ERASER
+    }
+
+    fun setStylusGestureEnabled(value: Boolean) {
+        stylusGesture = stylusGesture.copy(enabled = value)
+        store.putInt(KEY_STYLUS_ENABLED, if (value) 1 else 0)
+    }
+
+    fun setStylusBurstProtection(value: Boolean) {
+        stylusGesture = stylusGesture.copy(burstProtection = value)
+        store.putInt(KEY_STYLUS_BURST_PROTECTION, if (value) 1 else 0)
+    }
+
+    fun setStylusAutoReturnDelayMs(delayMs: Long) {
+        stylusGesture = stylusGesture.copy(autoReturnDelayMs = delayMs)
+        store.putInt(KEY_STYLUS_AUTO_RETURN, delayMs.toInt())
+    }
+
+    fun setStylusTapSpeed(speed: StylusTapSpeed) {
+        stylusGesture = stylusGesture.copy(speed = speed)
+        store.putInt(KEY_STYLUS_SPEED, speed.code)
+    }
+
+    fun setStylusCooldownMs(ms: Long) {
+        val value = ms.coerceIn(StylusGestureConfig.MIN_COOLDOWN_MS, StylusGestureConfig.MAX_COOLDOWN_MS)
+        stylusGesture = stylusGesture.copy(cooldownMs = value)
+        store.putInt(KEY_STYLUS_COOLDOWN, value.toInt())
+    }
+
     companion object {
         // Radierergrenzen: 2..120, Standard 20 (an HiNote angelehnt).
         const val MIN_ERASER_RADIUS = 2
@@ -152,12 +219,19 @@ class EditorToolState(private val store: ToolSettingsStore) {
         const val KEY_PEN_COLOR = "pen_color"
         const val KEY_PEN_WIDTH = "pen_width_"
         const val KEY_BAR_PINNED = "bar_pinned"
+        const val KEY_COMPACT = "editor_compact"
         const val KEY_ERASER_STYLE = "eraser_style"
         const val KEY_ERASER_RADIUS = "eraser_radius"
 
         const val KEY_LASSO_INK = "lasso_ink"
         const val KEY_LASSO_TEXT = "lasso_text"
         const val KEY_LASSO_IMAGE = "lasso_image"
+
+        const val KEY_STYLUS_ENABLED = "stylus_gesture_enabled"
+        const val KEY_STYLUS_BURST_PROTECTION = "stylus_burst_protection"
+        const val KEY_STYLUS_AUTO_RETURN = "stylus_auto_return_delay_ms"
+        const val KEY_STYLUS_SPEED = "stylus_gesture_speed"
+        const val KEY_STYLUS_COOLDOWN = "stylus_gesture_cooldown_ms"
 
         // Gespeicherte Codes unabhängig von der Reihenfolge des Enums.
         private fun codeOf(style: PageCanvasView.EraserStyle): Int = when (style) {

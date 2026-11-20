@@ -17,9 +17,11 @@ Handschrift wird über die geräteeigene E-Ink-Stiftschicht mit minimalster Late
 ### ✍️ Editor & Stift-Engine
 - **Flüssiges E-Ink-Schreiben:** Direkte Anbindung an Huaweis hardwarebeschleunigte E-Ink-Stiftschicht (`HWEditView`) für verzögerungsfreies Schreiben.
 - **Stifttypen:** Vier Stiftmodi (Füllfederhalter, Kugelschreiber, Bleistift, Marker mit echter Transparenz) in den Farben Schwarz, Blau und Rot mit stufenloser Größenwahl.
+- **M-Pencil Stift-Geste (Doppeltipp):** Doppeltipp auf die Sensorfläche des Huawei M-Pencil schaltet blitzschnell zwischen Stift und Radierer um (inkl. exakter Wiederherstellung von Stiftart, Breite und Farbe). Integrierter **Zappelschutz** unterdrückt versehentliches Umschalten bei nervösem Mehrfachtippen. Einstellbarer **Auto-Rücksprung** wechselt nach dem Radieren beim Absetzen des Stifts automatisch zum Stift zurück. Schalter im Radierer-Untermenü mit Einstellungs-Direktsprung und kontraststarkem Status-Badge am Haupt-Radierer-Button.
 - **Radierer:** Präzises Teilstück-Radieren und schnelles Vollstrich-Löschen („Striche löschen“).
 - **Lasso-Werkzeug:** Auswählen, Verschieben, Ausschneiden, Kopieren, Einfügen und Löschen von Strichen mit Filteroptionen (Stift, Text, Bild).
 - **Zoom & Verschieben:** Zoom von 100 % bis 500 % über `-`/`+` in der Kopfzeile; im gezoomten Zustand verschiebt ein Finger die Seite (nie, solange der Stift aufliegt oder schwebt). Das Schreiben bleibt immer frei.
+- **Kompakte Leiste:** Ein Knopf ganz rechts in der Werkzeugzeile klappt die Kopfzeile ein. Die Leiste ist dann nur noch 24 dp hoch und enthält zusätzlich Seitenwechsel mit Seitenzahl sowie Rückgängig/Wiederholen; mehr Platz zum Schreiben. Die Wahl bleibt erhalten.
 - **Seitenleiste & Lesezeichen:** Schnellnavigation mit Miniaturvorschauen aller Seiten, Lesezeichen-Markierungen (`★`) und direktem Seitensprung („Gehe zu“).
 - **Verlauf:** Unbegrenzter Undo/Redo-Verlauf pro Seite.
 
@@ -35,6 +37,7 @@ Handschrift wird über die geräteeigene E-Ink-Stiftschicht mit minimalster Late
 - **Audioaufnahmen:** Integrierter Voice-Recorder (AAC/M4A), zweizeilige Steuerleiste, Umbenennen, Spurverwaltung und Export einzelner Aufnahmen.
 
 ### 📂 Startseite & Notizverwaltung
+- **Neue Notiz im Ordner:** Das Ordnermenü (⋮) und ein „+“ auf der Ordnerkachel legen eine Notiz direkt im jeweiligen Ordner an.
 - **Übersicht:** Umschaltbar zwischen Kachelraster und kompakter Liste mit Seitenvorschau, Notiztitel, Änderungsdatum und Favoriten-/Fixier-Symbol.
 - **Kategoriemenü:** Schnellauswahl im Titel für *Alle Notizen*, *Nicht kategorisiert*, *Favoriten*, *Papierkorb* und *Sicherungen*.
 - **Ordnerhierarchie:** Vollständige Ordnerverwaltung mit Mehrfach-Vorschaukacheln.

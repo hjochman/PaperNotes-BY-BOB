@@ -7,9 +7,23 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-20
+
 ### Hinzugefügt
 
+- **Stift-Geste für Huawei M-Pencil (2. Gen) (Android-App):**
+  - **Doppeltipp-Umschalten:** Doppeltippen auf die Sensorfläche des Huawei M-Pencil wechselt zwischen dem aktuellen Schreibstift und dem Radierer (Broadcast `com.huawei.stylus.action.BUTTON_DOUBLE_PRESSED`).
+  - **Zustandswiederherstellung:** Stifttyp, Linienstärke und Farbe werden beim Umschalten gemerkt und beim Zurückspringen exakt wiederhergestellt.
+  - **Zappelschutz (Fidgeting-Filter):** Nervöses Mehrfachtippen beim Nachdenken wird gefiltert und bricht versehentliche Umschaltungen ab.
+  - **Auto-Rücksprung:** Nach dem Radieren wechselt die App beim Absetzen des Stifts automatisch nach einer einstellbaren Verzögerung (Aus, 0 s, 0,5 s, 0,8 s, 1,5 s, 2,0 s) zum Schreibstift zurück.
+  - **Bedienung im Editor:** Schnellumschalter im Radierer-Untermenü (langer Klick öffnet die Einstellungen) und kontrastreiches Status-Badge am Haupt-Radierer-Button der Werkzeugleiste.
+  - **Einstellungen:** Eigener Abschnitt in den Einstellungen mit ScrollView zur Konfiguration von Zappelschutz, Auto-Rücksprung und Tipp-Geschwindigkeit (5 Stufen).
 - **Neue Notiz direkt im Ordner (Android-App):** Das Ordnermenü (⋮) enthält den Eintrag „Neue Notiz“, der die Notiz in diesem Ordner anlegt und öffnet. In der Kachelansicht zeigt jede Ordnerkachel oben rechts ein kleines „+“ mit derselben Funktion (nicht im Auswahlmodus). Am Gerät noch zu bestätigen.
+- **Kompakte Editor-Leiste (Android-App):** Ein Knopf ganz rechts in der Werkzeugzeile klappt die Kopfzeile ein. Die Werkzeugzeile schrumpft dann auf 24 dp Höhe (Icons ohne Leerraum) und trägt zusätzlich Seitenwechsel mit Seitenzahl sowie Rückgängig/Wiederholen; die bisherigen Werkzeuge (inkl. Neue Seite) bleiben dort. Zoom, Seitenleiste, Titel und Menü sind nur in der ausgeklappten Ansicht erreichbar. Der Zustand wird gemerkt (`EditorToolState.compact`), der Rand-Balken für den sichtbaren Ausschnitt passt sich beim Ein-/Ausklappen an die neue Höhe an. Am Gerät noch zu bestätigen.
+
+### Geändert
+
+- **Einstellungen (Android-App):** Horizontale Trennlinien stehen nur noch über den Abschnittsüberschriften (Sicherung, Papierkorb, Stift / M-Pencil, neu: App mit Version und Info); zwischen den Zeilen entfallen sie. Der senkrechte Scrollbalken ist jetzt 14 dp dick, schwarz auf hellgrauer Schiene und blendet nicht mehr aus, damit klar ist, dass die Seite scrollt. Am Gerät noch zu bestätigen.
 
 ### Behoben
 

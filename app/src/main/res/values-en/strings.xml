@@ -82,6 +82,9 @@
     <string name="editor_back">Back</string>
     <string name="page_prev">Previous page</string>
     <string name="page_next">Next page</string>
+    <string name="bar_collapse">Collapse bar</string>
+    <string name="bar_expand">Expand bar</string>
+
     <string name="zoom_percent">%d %%</string>
     <string name="zoom_in">Zoom in</string>
     <string name="zoom_out">Zoom out</string>
@@ -128,6 +131,7 @@
     <string name="tool_pen">Pen</string>
     <string name="tool_eraser">Eraser</string>
     <string name="tool_lasso">Lasso</string>
+    <string name="tool_stylus_tap">Stylus button gesture (M-Pencil) on/off</string>
     <string name="tool_text">Text box</string>
     <string name="textbox_edit">Edit</string>
     <string name="textbox_format">Format</string>
@@ -333,6 +337,27 @@
     <string name="backups_help">Help</string>
     <string name="backups_help_title">How backups work</string>
     <string name="backups_help_message">While you write, the app automatically saves a backup copy of the note at the interval you choose in Settings, but only if something changed.\n\nThe last 10 backups of each note are kept; older ones are deleted automatically. Here you see the latest backup of each note. “Restore as copy” creates a new note from it and never overwrites the original.\n\nWhen a note goes to the trash, its backups are kept as an emergency copy. When the note is permanently deleted there, individually, by emptying the trash, or automatically after the set period, its backups are deleted too.\n\nIn Settings you can change the interval or delete all backups.</string>
+    <string name="settings_stylus_section">Stylus / M-Pencil</string>
+    <string name="settings_stylus_on">On</string>
+    <string name="settings_stylus_off">Off</string>
+    <string name="settings_stylus_burst_protection">Fidget protection (ignore repeated tapping)</string>
+    <string name="settings_stylus_auto_return">Auto-return to pen</string>
+    <string name="settings_stylus_auto_return_title">Auto-return after erasing</string>
+    <string name="settings_stylus_auto_return_off">Off (switch manually)</string>
+    <string name="settings_stylus_auto_return_0s">Immediately on lift (0 s)</string>
+    <string name="settings_stylus_auto_return_0_5s">0.5 seconds</string>
+    <string name="settings_stylus_auto_return_0_8s">0.8 seconds (default)</string>
+    <string name="settings_stylus_auto_return_1_5s">1.5 seconds</string>
+    <string name="settings_stylus_auto_return_2s">2.0 seconds</string>
+    <string name="settings_stylus_speed">Tap speed</string>
+    <string name="settings_stylus_speed_title">Tap speed</string>
+    <string name="settings_stylus_speed_very_fast">Very fast (200 ms)</string>
+    <string name="settings_stylus_speed_fast">Fast (300 ms)</string>
+    <string name="settings_stylus_speed_normal">Normal (400 ms)</string>
+    <string name="settings_stylus_speed_relaxed">Relaxed (500 ms)</string>
+    <string name="settings_stylus_speed_slow">Slow (650 ms)</string>
+
+    <string name="settings_app_section">App</string>
     <string name="settings_version">Version</string>
     <string name="settings_about">About</string>
     <string name="trash_empty_action">Empty trash</string>
@@ -361,11 +386,10 @@
     <string name="about_news_title">New in version %1$s</string>
     <string name="about_bullet_format">• %1$s</string>
     <string-array name="about_news_items">
-        <item>Low-latency handwriting with native E-Ink pen layer on Huawei MatePad Paper</item>
-        <item>21 page templates, rich-text boxes, images, audio recordings and vector PDF export</item>
-        <item>Trash bin with retention policy (default 30 days), categories and automatic backups</item>
-        <item>HiNote note import (cards, folder hierarchy, SAF)</item>
-        <item>Nextcloud synchronization and browser plugin with native PaperNote display</item>
+        <item>Compact editor bar: a button on the right collapses the header, page navigation and undo/redo then move into the tool row</item>
+        <item>M-Pencil: double tap switches between pen and eraser, with fidget protection and auto-return</item>
+        <item>New note directly in a folder via the folder menu or the “+” on the folder tile</item>
+        <item>Zoom with “-”/“+”, one-finger panning; the start of a stroke is no longer lost while writing</item>
     </string-array>
     <string name="about_description">PaperNotes by BOB is a note-taking app for handwritten notes on the Huawei Paper (E-Ink). Notes are stored as files in the Documents/PaperNotes folder and can be organized in folders, shared, exported as PDF and restored from the trash. Automatic backups, import of HiNote notes and a one-way sync to Nextcloud are built in.</string>
     <string name="about_license">Free software under the GNU General Public License v3.0 or later. Copyright © 2025–2026 hjochman. This program is distributed without any warranty.</string>

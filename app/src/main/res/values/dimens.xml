@@ -2,6 +2,7 @@
     <!-- Feste Höhen: flache Kopf-/Werkzeugzeile (Blatt soll groß bleiben); Unterleiste liegt als Popup über dem Blatt. -->
     <dimen name="editor_header_height">48dp</dimen>
     <dimen name="editor_toolbar_height">40dp</dimen>
+    <dimen name="editor_toolbar_compact_height">24dp</dimen>
     <dimen name="editor_subbar_height">56dp</dimen>
 
     <!-- Widget-Rahmen: inkOS clippt das Widget auf RoundedCornerShape(12dp). Der Rahmen liegt deshalb mit widget_inset Abstand

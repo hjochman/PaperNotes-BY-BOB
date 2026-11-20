@@ -82,6 +82,9 @@
     <string name="editor_back">Zurück</string>
     <string name="page_prev">Vorherige Seite</string>
     <string name="page_next">Nächste Seite</string>
+    <string name="bar_collapse">Leiste einklappen</string>
+    <string name="bar_expand">Leiste ausklappen</string>
+
     <string name="zoom_percent">%d %%</string>
     <string name="zoom_in">Vergrößern</string>
     <string name="zoom_out">Verkleinern</string>
@@ -128,6 +131,7 @@
     <string name="tool_pen">Stift</string>
     <string name="tool_eraser">Radierer</string>
     <string name="tool_lasso">Lasso</string>
+    <string name="tool_stylus_tap">Stift-Tastengeste (M-Pencil) ein/aus</string>
     <string name="tool_text">Textfeld</string>
     <string name="textbox_edit">Bearbeiten</string>
     <string name="textbox_format">Formatieren</string>
@@ -333,6 +337,27 @@
     <string name="backups_help">Hilfe</string>
     <string name="backups_help_title">So funktionieren Sicherungen</string>
     <string name="backups_help_message">Während du schreibst, legt die App in dem Abstand, den du in den Einstellungen wählst, automatisch eine Sicherungskopie der Notiz an – aber nur, wenn sich etwas geändert hat.\n\nPro Notiz bleiben die letzten 10 Sicherungen erhalten; ältere werden automatisch gelöscht. Hier siehst du je Notiz die jüngste Sicherung. „Wiederherstellen als Kopie“ legt daraus eine neue Notiz an und überschreibt nie das Original.\n\nWandert eine Notiz in den Papierkorb, bleiben ihre Sicherungen als Notfallkopie erhalten. Wird die Notiz dort endgültig gelöscht, einzeln, beim Leeren oder automatisch nach der eingestellten Frist, werden auch ihre Sicherungen gelöscht.\n\nIn den Einstellungen kannst du das Intervall ändern oder alle Sicherungen löschen.</string>
+    <string name="settings_stylus_section">Stift / M-Pencil</string>
+    <string name="settings_stylus_on">Ein</string>
+    <string name="settings_stylus_off">Aus</string>
+    <string name="settings_stylus_burst_protection">Zappelschutz (Dauertippen ignorieren)</string>
+    <string name="settings_stylus_auto_return">Auto-Rücksprung zum Stift</string>
+    <string name="settings_stylus_auto_return_title">Auto-Rücksprung nach dem Radieren</string>
+    <string name="settings_stylus_auto_return_off">Aus (manuell umschalten)</string>
+    <string name="settings_stylus_auto_return_0s">Sofort beim Abheben (0 s)</string>
+    <string name="settings_stylus_auto_return_0_5s">0,5 Sekunden</string>
+    <string name="settings_stylus_auto_return_0_8s">0,8 Sekunden (Standard)</string>
+    <string name="settings_stylus_auto_return_1_5s">1,5 Sekunden</string>
+    <string name="settings_stylus_auto_return_2s">2,0 Sekunden</string>
+    <string name="settings_stylus_speed">Tipp-Geschwindigkeit</string>
+    <string name="settings_stylus_speed_title">Tipp-Geschwindigkeit</string>
+    <string name="settings_stylus_speed_very_fast">Sehr schnell (200 ms)</string>
+    <string name="settings_stylus_speed_fast">Schnell (300 ms)</string>
+    <string name="settings_stylus_speed_normal">Normal (400 ms)</string>
+    <string name="settings_stylus_speed_relaxed">Gemächlich (500 ms)</string>
+    <string name="settings_stylus_speed_slow">Langsam (650 ms)</string>
+
+    <string name="settings_app_section">App</string>
     <string name="settings_version">Version</string>
     <string name="settings_about">Info</string>
     <string name="trash_empty_action">Papierkorb leeren</string>
@@ -361,11 +386,10 @@
     <string name="about_news_title">Neu in Version %1$s</string>
     <string name="about_bullet_format">• %1$s</string>
     <string-array name="about_news_items">
-        <item>Flüssiges Schreiben mit nativer E-Ink-Stiftschicht auf dem Huawei MatePad Paper</item>
-        <item>21 Seitenvorlagen, Rich-Text-Textboxen, Bilder, Audioaufnahmen und Vektor-PDF-Export</item>
-        <item>Papierkorb mit automatischer Frist (Standard 30 Tage), Kategorien und automatische Sicherungen</item>
-        <item>HiNote-Notiz-Import (Kacheln, Ordnerhierarchie, SAF)</item>
-        <item>Nextcloud-Sync und Browser-Plugin mit nativer PaperNote-Anzeige</item>
+        <item>Kompakte Editor-Leiste: ein Knopf rechts klappt die Kopfzeile ein, Seitenwechsel und Rückgängig/Wiederholen sitzen dann in der Werkzeugzeile</item>
+        <item>M-Pencil: Doppeltipp schaltet zwischen Stift und Radierer um, mit Zappelschutz und Auto-Rücksprung</item>
+        <item>Neue Notiz direkt im Ordner über das Ordnermenü oder das „+“ auf der Ordnerkachel</item>
+        <item>Zoom über „-“/„+“, Verschieben mit einem Finger; der Strichanfang geht beim Schreiben nicht mehr verloren</item>
     </string-array>
     <string name="about_description">PaperNotes by BOB ist eine Notiz-App für handschriftliche Notizen auf dem Huawei Paper (E-Ink). Notizen liegen als Dateien im Ordner Dokumente/PaperNotes und lassen sich in Ordnern ordnen, teilen, als PDF exportieren und im Papierkorb wiederherstellen. Automatische Sicherungen, der Import von HiNote-Notizen und ein Einweg-Sync nach Nextcloud sind eingebaut.</string>
     <string name="about_license">Freie Software unter der GNU General Public License v3.0 oder später. Copyright © 2025–2026 hjochman. Dieses Programm wird ohne jede Gewährleistung verteilt.</string>

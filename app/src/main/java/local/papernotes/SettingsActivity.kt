@@ -9,9 +9,14 @@ import android.view.View
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.core.content.edit
 import local.papernotes.about.AboutActivity
 import local.papernotes.backup.BackupsActivity
+import local.papernotes.editor.EditorActivity
+import local.papernotes.editor.EditorToolState
+import local.papernotes.editor.StylusGestureConfig
+import local.papernotes.editor.StylusTapSpeed
 import local.papernotes.storage.BackupPolicy
 import local.papernotes.storage.BackupStore
 import local.papernotes.storage.NoteRepository
@@ -44,6 +49,10 @@ class SettingsActivity : Activity() {
     private lateinit var rowTrashRetention: View
     private lateinit var textTrashRetention: TextView
 
+    private lateinit var textStylusBurst: TextView
+    private lateinit var textStylusAutoReturn: TextView
+    private lateinit var textStylusSpeed: TextView
+
     private var backupCount = 0
     private var backupSizeBytes = 0L
     private var trashCount = 0
@@ -64,6 +73,10 @@ class SettingsActivity : Activity() {
         rowTrashRetention = findViewById(R.id.rowTrashRetention)
         textTrashRetention = findViewById(R.id.textTrashRetention)
 
+        textStylusBurst = findViewById(R.id.textStylusBurst)
+        textStylusAutoReturn = findViewById(R.id.textStylusAutoReturn)
+        textStylusSpeed = findViewById(R.id.textStylusSpeed)
+
         findViewById<ImageButton>(R.id.buttonBack).setOnClickListener { finish() }
         findViewById<TextView>(R.id.textLocation).text = NotesLocation.location().absolutePath
         findViewById<TextView>(R.id.textVersion).text = versionName()
@@ -76,6 +89,9 @@ class SettingsActivity : Activity() {
         rowTrash.setOnClickListener { startActivity(Intent(this, TrashActivity::class.java)) }
         rowEmptyTrash.setOnClickListener { if (trashCount > 0) askEmptyTrash() }
         rowTrashRetention.setOnClickListener { showTrashRetentionDialog() }
+        findViewById<View>(R.id.rowStylusBurst).setOnClickListener { toggleStylusBurst() }
+        findViewById<View>(R.id.rowStylusAutoReturn).setOnClickListener { showStylusAutoReturnDialog() }
+        findViewById<View>(R.id.rowStylusSpeed).setOnClickListener { showStylusSpeedDialog() }
         findViewById<View>(R.id.rowAbout).setOnClickListener { startActivity(Intent(this, AboutActivity::class.java)) }
 
         updateBackupIntervalUi()
@@ -90,6 +106,7 @@ class SettingsActivity : Activity() {
         updateBackupIntervalUi()
         refreshBackupStats()
         refreshTrashCount()
+        updateStylusUi()
     }
 
     override fun onDestroy() {
@@ -271,6 +288,82 @@ class SettingsActivity : Activity() {
             if (idx in options.indices) {
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit { putInt(TrashPolicy.PREF_KEY_RETENTION_DAYS, options[idx]) }
                 updateTrashRetentionUi()
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- Stift / M-Pencil
+
+    private fun stylusPrefs() = getSharedPreferences(EditorActivity.PREFS_NAME, MODE_PRIVATE)
+
+    private fun isStylusBurstEnabled(): Boolean =
+        stylusPrefs().getInt(EditorToolState.KEY_STYLUS_BURST_PROTECTION, 1) != 0
+
+    private fun stylusAutoReturnDelayMs(): Long =
+        stylusPrefs().getInt(EditorToolState.KEY_STYLUS_AUTO_RETURN, StylusGestureConfig.DEFAULT_AUTO_RETURN_DELAY_MS.toInt()).toLong()
+
+    private fun stylusSpeed(): StylusTapSpeed =
+        StylusTapSpeed.fromCode(stylusPrefs().getInt(EditorToolState.KEY_STYLUS_SPEED, StylusTapSpeed.NORMAL.code))
+
+    private fun autoReturnLabel(delayMs: Long): String = when (delayMs) {
+        -1L -> getString(R.string.settings_stylus_auto_return_off)
+        0L -> getString(R.string.settings_stylus_auto_return_0s)
+        500L -> getString(R.string.settings_stylus_auto_return_0_5s)
+        800L -> getString(R.string.settings_stylus_auto_return_0_8s)
+        1500L -> getString(R.string.settings_stylus_auto_return_1_5s)
+        2000L -> getString(R.string.settings_stylus_auto_return_2s)
+        else -> getString(R.string.settings_stylus_auto_return_0_8s)
+    }
+
+    @StringRes
+    private fun speedLabelRes(speed: StylusTapSpeed): Int = when (speed) {
+        StylusTapSpeed.VERY_FAST -> R.string.settings_stylus_speed_very_fast
+        StylusTapSpeed.FAST -> R.string.settings_stylus_speed_fast
+        StylusTapSpeed.NORMAL -> R.string.settings_stylus_speed_normal
+        StylusTapSpeed.RELAXED -> R.string.settings_stylus_speed_relaxed
+        StylusTapSpeed.SLOW -> R.string.settings_stylus_speed_slow
+    }
+
+    private fun updateStylusUi() {
+        textStylusBurst.setText(if (isStylusBurstEnabled()) R.string.settings_stylus_on else R.string.settings_stylus_off)
+        textStylusAutoReturn.text = autoReturnLabel(stylusAutoReturnDelayMs())
+        textStylusSpeed.setText(speedLabelRes(stylusSpeed()))
+    }
+
+    private fun toggleStylusBurst() {
+        val next = !isStylusBurstEnabled()
+        stylusPrefs().edit { putInt(EditorToolState.KEY_STYLUS_BURST_PROTECTION, if (next) 1 else 0) }
+        updateStylusUi()
+    }
+
+    private fun showStylusAutoReturnDialog() {
+        val options = longArrayOf(-1L, 0L, 500L, 800L, 1500L, 2000L)
+        val current = stylusAutoReturnDelayMs()
+        val currentIdx = options.indexOf(current).let { if (it >= 0) it else 3 }
+        EinkDialog.singleChoice(
+            this,
+            getString(R.string.settings_stylus_auto_return_title),
+            options.map { autoReturnLabel(it) },
+            currentIdx,
+        ) { chosenIdx ->
+            if (chosenIdx in options.indices) {
+                stylusPrefs().edit { putInt(EditorToolState.KEY_STYLUS_AUTO_RETURN, options[chosenIdx].toInt()) }
+                updateStylusUi()
+            }
+        }
+    }
+
+    private fun showStylusSpeedDialog() {
+        val speeds = StylusTapSpeed.values()
+        EinkDialog.singleChoice(
+            this,
+            getString(R.string.settings_stylus_speed_title),
+            speeds.map { getString(speedLabelRes(it)) },
+            speeds.indexOf(stylusSpeed()),
+        ) { chosenIdx ->
+            if (chosenIdx in speeds.indices) {
+                stylusPrefs().edit { putInt(EditorToolState.KEY_STYLUS_SPEED, speeds[chosenIdx].code) }
+                updateStylusUi()
             }
         }
     }

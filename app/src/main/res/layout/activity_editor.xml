@@ -113,11 +113,12 @@
     </LinearLayout>
 
     <View
+        android:id="@+id/headerDivider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/black" />
 
-    <!-- Werkzeugleiste -->
+    <!-- Werkzeugleiste. Eingeklappt (Knopf rechts) ersetzt sie die Kopfzeile und trägt zusätzlich Seitenwechsel und Undo/Redo. -->
     <LinearLayout
         android:id="@+id/toolBar"
         android:layout_width="match_parent"
@@ -125,17 +126,41 @@
         android:gravity="center"
         android:orientation="horizontal">
 
+        <View
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
         <ImageButton
             android:id="@+id/buttonToolPen"
             style="@style/Widget.PaperNotes.ToolButton"
             android:contentDescription="@string/tool_pen"
             android:src="@drawable/ic_tool_pen" />
 
-        <ImageButton
-            android:id="@+id/buttonToolEraser"
-            style="@style/Widget.PaperNotes.ToolButton"
-            android:contentDescription="@string/tool_eraser"
-            android:src="@drawable/ic_tool_eraser" />
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent">
+
+            <ImageButton
+                android:id="@+id/buttonToolEraser"
+                style="@style/Widget.PaperNotes.ToolButton"
+                android:contentDescription="@string/tool_eraser"
+                android:src="@drawable/ic_tool_eraser" />
+
+            <ImageView
+                android:id="@+id/badgeEraserStylus"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="2dp"
+                android:layout_marginEnd="2dp"
+                android:background="@drawable/bg_badge_indicator"
+                android:contentDescription="@string/tool_stylus_tap"
+                android:padding="2dp"
+                android:src="@drawable/ic_tool_stylus_tap"
+                android:tint="@color/black"
+                android:visibility="gone" />
+        </FrameLayout>
 
         <ImageButton
             android:id="@+id/buttonToolLasso"
@@ -155,7 +180,11 @@
             android:contentDescription="@string/tool_image"
             android:src="@drawable/ic_tool_image" />
 
-        <View style="@style/Widget.PaperNotes.Divider" />
+        <View
+            style="@style/Widget.PaperNotes.Divider"
+            android:layout_height="match_parent"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp" />
 
         <ImageButton
             android:id="@+id/buttonTemplate"
@@ -175,7 +204,11 @@
             android:contentDescription="@string/page_delete"
             android:src="@drawable/ic_tool_page_delete" />
 
-        <View style="@style/Widget.PaperNotes.Divider" />
+        <View
+            style="@style/Widget.PaperNotes.Divider"
+            android:layout_height="match_parent"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp" />
 
         <FrameLayout
             android:layout_width="wrap_content"
@@ -202,6 +235,70 @@
                 android:textStyle="bold"
                 android:visibility="gone" />
         </FrameLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <!-- Nur eingeklappt sichtbar: Seitenwechsel mit Seitenzahl, Rück/Vor -->
+        <LinearLayout
+            android:id="@+id/compactExtras"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/buttonCompactPrev"
+                style="@style/Widget.PaperNotes.ToolButton"
+                android:layout_width="36dp"
+                android:contentDescription="@string/page_prev"
+                android:src="@drawable/ic_chevron_left" />
+
+            <TextView
+                android:id="@+id/textCompactPage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:minWidth="36dp"
+                android:textColor="@color/black"
+                android:textSize="14sp" />
+
+            <ImageButton
+                android:id="@+id/buttonCompactNext"
+                style="@style/Widget.PaperNotes.ToolButton"
+                android:layout_width="36dp"
+                android:contentDescription="@string/page_next"
+                android:src="@drawable/ic_chevron_right" />
+
+            <View
+                style="@style/Widget.PaperNotes.Divider"
+                android:layout_height="match_parent"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp" />
+
+            <ImageButton
+                android:id="@+id/buttonCompactUndo"
+                style="@style/Widget.PaperNotes.ToolButton"
+                android:layout_width="36dp"
+                android:contentDescription="@string/undo"
+                android:src="@drawable/ic_undo" />
+
+            <ImageButton
+                android:id="@+id/buttonCompactRedo"
+                style="@style/Widget.PaperNotes.ToolButton"
+                android:layout_width="36dp"
+                android:contentDescription="@string/redo"
+                android:src="@drawable/ic_redo" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/buttonToggleBar"
+            style="@style/Widget.PaperNotes.ToolButton"
+            android:contentDescription="@string/bar_collapse"
+            android:src="@drawable/ic_bar_collapse" />
     </LinearLayout>
 
     <View
