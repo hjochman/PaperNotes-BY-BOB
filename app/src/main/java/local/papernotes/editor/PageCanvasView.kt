@@ -13,7 +13,6 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Region
 import android.util.AttributeSet
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -136,15 +135,14 @@ class PageCanvasView @JvmOverloads constructor(
     private var lassoSelectText = true
     private var lassoSelectImage = true
 
-    private var isScalingOrPanning = false
-    private var initialSpan = 0f
-    private var initialFocusX = 0f
-    private var initialFocusY = 0f
-    private var focusPageX = 0f
-    private var focusPageY = 0f
-    private var initialScale = 1f
-    private var initialOffsetX = 0f
-    private var initialOffsetY = 0f
+    /** Stift-Zustand für den Schutz des Strichanfangs (aufliegend, schwebend, gerade abgehoben). */
+    private val pen = PenGuard()
+
+    /** Ein-Finger-Verschieben der Seite; wirkt erst beim Loslassen und nur, wenn der Stift nicht im Spiel ist. */
+    private val pan = PanTracker(touchSlop.toFloat())
+
+    /** Eine Größenänderung kam, während der Stift aufliegt, und wird nach dem Abheben einmal nachgeholt. */
+    private var transformUpdatePending = false
 
     /** False, wenn `HWEditView` nicht erzeugt werden konnte (z. B. kein Huawei-Gerät). Dann gibt es nur den Hintergrund. */
     val isInkAvailable: Boolean get() = ink != null
@@ -152,8 +150,12 @@ class PageCanvasView @JvmOverloads constructor(
     val canUndo: Boolean get() = history.canUndo
     val canRedo: Boolean get() = history.canRedo
 
+    /** Balken am Rand und Gummiband-Pfeil beim Verschieben; berührungslos, unter der Stiftschicht. */
+    private val indicator = PanIndicatorView(context)
+
     init {
         addView(background, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        addView(indicator, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         try {
             val v = HWEditView(context)
             mapper = TrackMapper(v.getHWTrackCreator())
@@ -325,6 +327,7 @@ class PageCanvasView @JvmOverloads constructor(
      */
     fun showPage(page: Page, pageHistory: PageHistory, noteMedia: Map<String, ByteArray> = emptyMap()) {
         stopTextEdit()
+        transformUpdatePending = false // computeTransform() unten nimmt die aktuelle Größe
         history = pageHistory
         pageWidth = page.width
         pageHeight = page.height
@@ -334,6 +337,7 @@ class PageCanvasView @JvmOverloads constructor(
         background.setPageGeometry(pageWidth, transform)
         background.setTemplate(page.template)
         applyToInk(pageHistory.strokes)
+        updateIndicator()
         textboxes = page.textboxes
         rebuildTextboxViews()
         images = page.images
@@ -366,10 +370,22 @@ class PageCanvasView @JvmOverloads constructor(
         for (v in textboxViews) v.model?.let { v.bind(it, next) }
         for (v in imageViews) v.model?.let { v.bind(it, media[it.filePath], next) }
         reportZoom()
+        updateIndicator()
+    }
+
+    /** Zeigt am Rand, welchen Teil der Seite man sieht (nur wenn es etwas zu verschieben gibt). */
+    private fun updateIndicator() {
+        if (pageWidth <= 0 || width <= 0 || height <= 0) return
+        indicator.setViewport(transform, pageWidth, pageHeight, width.toFloat(), height.toFloat())
     }
 
     private fun updateTransform() {
         if (pageWidth <= 0) return
+        if (pen.isDown) {
+            // setTrackList/clear würden den laufenden Strich löschen: nach dem Abheben nachholen.
+            transformUpdatePending = true
+            return
+        }
         val next = computeTransform()
         if (next == transform) return
         flush()
@@ -808,85 +824,10 @@ class PageCanvasView @JvmOverloads constructor(
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        Log.d("PageCanvasView", "dispatchTouchEvent: action=${ev.actionMasked}, pointers=${ev.pointerCount}, tool=${tool}")
         val isFinger = ev.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER
+        trackPen(ev)
 
-        // Multi-Touch Geste für Zoom und Verschieben (Pan)
-        if (ev.pointerCount >= 2) {
-            if (!isScalingOrPanning) {
-                isScalingOrPanning = true
-                suspendWriting(true)
-                flush()
-
-                val p1x = ev.getX(0)
-                val p1y = ev.getY(0)
-                val p2x = ev.getX(1)
-                val p2y = ev.getY(1)
-
-                val dx = p1x - p2x
-                val dy = p1y - p2y
-                initialSpan = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat().coerceAtLeast(10f)
-
-                initialFocusX = (p1x + p2x) / 2f
-                initialFocusY = (p1y + p2y) / 2f
-
-                focusPageX = transform.viewToPageX(initialFocusX)
-                focusPageY = transform.viewToPageY(initialFocusY)
-
-                initialScale = transform.scale
-                initialOffsetX = transform.offsetX
-                initialOffsetY = transform.offsetY
-            }
-
-            if (ev.actionMasked == MotionEvent.ACTION_MOVE && isScalingOrPanning) {
-                val p1x = ev.getX(0)
-                val p1y = ev.getY(0)
-                val p2x = ev.getX(1)
-                val p2y = ev.getY(1)
-
-                val dx = p1x - p2x
-                val dy = p1y - p2y
-                val currentSpan = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat().coerceAtLeast(10f)
-
-                val currentFocusX = (p1x + p2x) / 2f
-                val currentFocusY = (p1y + p2y) / 2f
-
-                val baseScale = if (width > 0 && pageWidth > 0) width.toFloat() / pageWidth.toFloat() else 1f
-                val rawScale = initialScale * (currentSpan / initialSpan)
-
-                var nextScale = rawScale.coerceIn(baseScale, baseScale * 5f)
-                var nextOffsetX = currentFocusX - focusPageX * nextScale
-                var nextOffsetY = currentFocusY - focusPageY * nextScale
-
-                if (nextScale <= baseScale) {
-                    nextScale = baseScale
-                    nextOffsetX = 0f
-                    if (pageHeight * nextScale < height) {
-                        nextOffsetY = (height - pageHeight * nextScale) / 2f
-                    } else {
-                        nextOffsetY = nextOffsetY.coerceIn(height - pageHeight * nextScale, 0f)
-                    }
-                } else {
-                    nextOffsetX = nextOffsetX.coerceIn(width - pageWidth * nextScale, 0f)
-                    if (pageHeight * nextScale < height) {
-                        nextOffsetY = (height - pageHeight * nextScale) / 2f
-                    } else {
-                        nextOffsetY = nextOffsetY.coerceIn(height - pageHeight * nextScale, 0f)
-                    }
-                }
-
-                setTransform(PageTransform(nextScale, nextOffsetX, nextOffsetY))
-            }
-            return true
-        }
-
-        // Wenn die Zoom-Geste aktiv war und jetzt Finger gehoben werden
-        if (isScalingOrPanning && (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL || ev.pointerCount < 2)) {
-            isScalingOrPanning = false
-            suspendWriting(false)
-            invalidate()
-            return true
-        }
+        if (handlePan(ev, isFinger)) return true
 
         // Tippen mit dem Stift: in die Auswahl öffnet das Aktionsmenü erneut, an eine andere Stelle bietet „Einfügen“ an
         // (falls etwas kopiert wurde).
@@ -923,6 +864,130 @@ class PageCanvasView @JvmOverloads constructor(
         }
 
         return handled
+    }
+
+    private fun isPenTool(type: Int): Boolean = type == MotionEvent.TOOL_TYPE_STYLUS || type == MotionEvent.TOOL_TYPE_ERASER
+
+    private fun hasPen(ev: MotionEvent): Boolean = (0 until ev.pointerCount).any { isPenTool(ev.getToolType(it)) }
+
+    /** Merkt, ob der Stift aufliegt, schwebt oder gerade abgehoben wurde (Schutz für Strichanfang und Verschieben). */
+    private fun trackPen(ev: MotionEvent) {
+        val t = ev.eventTime
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN ->
+                if (isPenTool(ev.getToolType(ev.actionIndex))) pen.penDown(t)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP ->
+                if (isPenTool(ev.getToolType(ev.actionIndex))) penLifted(t)
+            MotionEvent.ACTION_CANCEL -> if (pen.isDown) penLifted(t)
+            else -> if (hasPen(ev)) pen.penNear(t)
+        }
+    }
+
+    /** Beim Abheben wird eine zurückgestellte Größenänderung einmal nachgeholt. */
+    private fun penLifted(time: Long) {
+        pen.penUp(time)
+        if (transformUpdatePending) {
+            transformUpdatePending = false
+            post { updateTransform() }
+        }
+    }
+
+    /** Schwebender Stift (Hover) zählt als "Stift im Spiel", damit ein Handballen die Seite nicht verschiebt. */
+    override fun dispatchGenericMotionEvent(ev: MotionEvent): Boolean {
+        if (hasPen(ev)) pen.penNear(ev.eventTime)
+        return super.dispatchGenericMotionEvent(ev)
+    }
+
+    /**
+     * Ein-Finger-Verschieben: nur, wenn es etwas zu verschieben gibt, der Stift seit [PenGuard.GRACE_MS] nicht im Spiel
+     * war und der Finger keine bearbeitbare Textbox/kein Bild trifft. Erst ab Touch-Slop (ein Tippen bleibt ein Tippen);
+     * die Seite springt beim Loslassen (E-Ink: kein Neuzeichnen bei jedem Pixel). Kommt ein zweiter Zeiger oder der Stift
+     * dazu, verfällt die Geste ohne Wirkung. True, wenn das Ereignis hier endet (nicht an die Kinder weitergeben).
+     */
+    private fun handlePan(ev: MotionEvent, isFinger: Boolean): Boolean {
+        val action = ev.actionMasked
+        val penInEvent = hasPen(ev)
+        if (action == MotionEvent.ACTION_DOWN) {
+            if (isFinger && panAllowedAt(ev)) pan.begin(ev.x, ev.y) else pan.end()
+        } else if (action == MotionEvent.ACTION_POINTER_DOWN || penInEvent) {
+            pan.abort()
+        }
+        if (pan.swallowing && !penInEvent) {
+            when (action) {
+                MotionEvent.ACTION_MOVE -> if (pan.isPanning) {
+                    pan.move(ev.x, ev.y)
+                    showPanArrow(ev)
+                } else {
+                    indicator.hideArrow()
+                }
+                MotionEvent.ACTION_UP -> {
+                    indicator.hideArrow()
+                    if (pan.isPanning && pen.fingerAllowed(ev.eventTime)) applyPan()
+                    pan.end()
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    indicator.hideArrow()
+                    pan.end()
+                }
+            }
+            return true
+        }
+        if (penInEvent) indicator.hideArrow()
+        when (action) {
+            MotionEvent.ACTION_MOVE -> if (pan.move(ev.x, ev.y) == PanStep.STARTED) {
+                // Die Kinder haben das Aufsetzen schon gesehen: abbrechen, damit nach dem Wischen kein Tippen entsteht.
+                val cancel = MotionEvent.obtain(ev)
+                cancel.action = MotionEvent.ACTION_CANCEL
+                super.dispatchTouchEvent(cancel)
+                cancel.recycle()
+                showPanArrow(ev)
+                return true
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> pan.end()
+        }
+        return false
+    }
+
+    /** Gummiband: Pfeil vom Aufsetzpunkt zum Finger. Liegt über allen Kindern, damit keine Textbox ihn verdeckt. */
+    private fun showPanArrow(ev: MotionEvent) {
+        if (indexOfChild(indicator) != childCount - 1) indicator.bringToFront()
+        indicator.showArrow(pan.startX, pan.startY, ev.x, ev.y)
+    }
+
+    private fun panAllowedAt(ev: MotionEvent): Boolean {
+        if (pageWidth <= 0 || width <= 0 || height <= 0) return false
+        if (editingView != null || cropOverlay != null) return false
+        if (!pen.fingerAllowed(ev.eventTime)) return false
+        if (!ZoomLogic.canPan(transform, width.toFloat(), height.toFloat(), pageWidth.toFloat(), pageHeight.toFloat())) return false
+        val x = ev.x
+        val y = ev.y
+        if (textboxViews.any { it.editable && x >= it.left && x <= it.right && y >= it.top && y <= it.bottom }) return false
+        if (imageViews.any { it.editable && it.contains(x, y) }) return false
+        return true
+    }
+
+    private fun applyPan() {
+        val next = ZoomLogic.panned(
+            transform, pan.totalDx, pan.totalDy, width.toFloat(), height.toFloat(), pageWidth.toFloat(), pageHeight.toFloat(),
+        )
+        if (next == transform) return
+        flush()
+        setTransform(next)
+    }
+
+    /** Zoom-Knopf "+": nächste Stufe, die Bildmitte bleibt stehen. Das Schreiben bleibt dabei frei. */
+    fun zoomIn() = zoomTo(ZoomLogic.stepUp(zoomPercent))
+
+    /** Zoom-Knopf "-": nächstniedrigere Stufe, die Bildmitte bleibt stehen. */
+    fun zoomOut() = zoomTo(ZoomLogic.stepDown(zoomPercent))
+
+    private fun zoomTo(percent: Int) {
+        if (pageWidth <= 0 || width <= 0 || height <= 0 || percent == zoomPercent) return
+        stopTextEdit()
+        flush()
+        setTransform(
+            ZoomLogic.zoomed(transform, width.toFloat(), height.toFloat(), pageWidth.toFloat(), pageHeight.toFloat(), percent),
+        )
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

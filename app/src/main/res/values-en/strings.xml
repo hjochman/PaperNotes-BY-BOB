@@ -83,6 +83,8 @@
     <string name="page_prev">Previous page</string>
     <string name="page_next">Next page</string>
     <string name="zoom_percent">%d %%</string>
+    <string name="zoom_in">Zoom in</string>
+    <string name="zoom_out">Zoom out</string>
     <string name="undo">Undo</string>
     <string name="redo">Redo</string>
     <string name="page_add">Add page</string>

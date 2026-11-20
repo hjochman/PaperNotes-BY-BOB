@@ -36,21 +36,27 @@
             android:textColor="@color/black"
             android:textSize="20sp" />
 
-        <!-- Zoom-Anzeige: nur sichtbar, solange der Zoom von 100 % abweicht -->
+        <!-- Zoom: Stufenknöpfe mit Anzeige (Schreiben bleibt dabei immer frei) -->
+        <ImageButton
+            android:id="@+id/buttonZoomOut"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/zoom_out"
+            android:src="@drawable/ic_zoom_out" />
+
         <TextView
             android:id="@+id/textZoom"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:background="@drawable/bg_widget_button_frame"
-            android:paddingStart="8dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="2dp"
+            android:minWidth="48dp"
+            android:gravity="center"
             android:textColor="@color/black"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
+            android:textSize="16sp" />
+
+        <ImageButton
+            android:id="@+id/buttonZoomIn"
+            style="@style/Widget.PaperNotes.IconButton"
+            android:contentDescription="@string/zoom_in"
+            android:src="@drawable/ic_zoom_in" />
 
         <ImageButton
             android:id="@+id/buttonPrevPage"
@@ -72,11 +78,6 @@
             style="@style/Widget.PaperNotes.IconButton"
             android:contentDescription="@string/page_next"
             android:src="@drawable/ic_chevron_right" />
-
-        <View
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1" />
 
         <ImageButton
             android:id="@+id/buttonUndo"

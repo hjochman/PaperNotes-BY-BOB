@@ -5,6 +5,16 @@ Alle nennenswerten Änderungen an diesem Projekt werden in dieser Datei dokument
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/)
 und dieses Projekt folgt [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Hinzugefügt
+
+- **Neue Notiz direkt im Ordner (Android-App):** Das Ordnermenü (⋮) enthält den Eintrag „Neue Notiz“, der die Notiz in diesem Ordner anlegt und öffnet. In der Kachelansicht zeigt jede Ordnerkachel oben rechts ein kleines „+“ mit derselben Funktion (nicht im Auswahlmodus). Am Gerät noch zu bestätigen.
+
+### Behoben
+
+- **Verschluckter Strichanfang beim Schreiben (Android-App):** Die Zwei-Finger-Geste für Zoom/Pan sperrte das Schreiben, sobald ein zweiter Zeiger (z. B. Handballen) aufsetzte. Sie entfällt. Zoom läuft nun über `-`/`+` mit Prozentanzeige in der Kopfzeile (100 bis 500 % in Stufen), Verschieben im gezoomten Zustand per Ein-Finger-Wischen, das nie greift, solange der Stift aufliegt, schwebt oder gerade abgehoben wurde. Beim Wischen zeigt ein Gummiband-Pfeil die Richtung, dünne Balken am Rand zeigen den sichtbaren Ausschnitt. Beim Öffnen einer Notiz ist das Schreiben bis zum Anzeigen der Seite gesperrt, und eine Größenänderung der Schreibfläche wird zurückgestellt, solange der Stift aufliegt. Das Debug-Log im Touch-Pfad entfällt. Am Gerät noch zu bestätigen.
+
 ## [1.0.0] - 2026-11-11
 
 Erstes vollständiges Haupt-Release von **PaperNotes by BOB** – die Notiz-App für das Huawei MatePad Paper (E-Ink) inklusive Nextcloud-Plugin.
@@ -16,7 +26,7 @@ Erstes vollständiges Haupt-Release von **PaperNotes by BOB** – die Notiz-App 
   - Vier Stifttypen (Füllfederhalter, Kugelschreiber, Bleistift, Marker mit echter Transparenz) in 3 Farben (Schwarz, Blau, Rot) und einstellbarer Strichstärke.
   - Radierer mit Teilstück- und Vollstrich-Löschung („Striche löschen“).
   - Lasso-Werkzeug mit Filtern (Stift, Text, Bild) und Aktionsmenü (Ausschneiden, Kopieren, Einfügen, Löschen).
-  - Zwei-Finger-Zoom (100 % bis 500 %) und Verschieben im Editor.
+  - Zoom (100 % bis 500 %) über `-`/`+` in der Kopfzeile und Verschieben der Seite per Ein-Finger-Wischen im Editor.
   - Undo/Redo-Verlauf pro Seite.
 
 - **Seitenvorlagen (21 Vorlagen):**

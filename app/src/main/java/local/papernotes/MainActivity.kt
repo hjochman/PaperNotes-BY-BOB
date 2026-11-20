@@ -152,6 +152,8 @@ class MainActivity : Activity() {
 
         override fun newQuickNote() = createNote()
 
+        override fun newNoteIn(folder: FolderItem) = createNote(folder.path)
+
         override fun noteMenu(anchor: View, note: NoteSummary) = showNoteMenu(anchor, note)
 
         override fun folderMenu(anchor: View, folder: FolderItem) = showFolderMenu(anchor, folder)
@@ -758,6 +760,7 @@ class MainActivity : Activity() {
     private fun showFolderMenu(anchor: View, folder: FolderItem) = showMenu(
         anchor,
         listOf(
+            MenuEntry(R.drawable.ic_note_add, getString(R.string.new_note)) { createNote(folder.path) },
             MenuEntry(R.drawable.ic_rename, getString(R.string.action_rename)) { askRenameFolder(folder) },
             MenuEntry(R.drawable.ic_trash, getString(R.string.delete)) { askDeleteFolder(folder) },
         ),
@@ -859,15 +862,16 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun createNote() {
+    /** Legt eine Notiz an: in [targetFolder] (Ordnermenü, Kachel-"+"), sonst im aktuellen Ordner der Ansicht. */
+    private fun createNote(targetFolder: String? = null) {
         val r = repo
         if (r == null || !NotesLocation.hasAccess(this)) {
             toast(R.string.error_no_storage)
             return
         }
-        val folder = if (currentCategory == HomeCategory.ALL) currentFolder else ""
+        val folder = targetFolder ?: if (currentCategory == HomeCategory.ALL) currentFolder else ""
         val title = getString(R.string.new_note_title) + " " + DateFormat.getDateInstance(DateFormat.SHORT).format(Date())
-        val category = currentCategory
+        val category = if (targetFolder != null) HomeCategory.ALL else currentCategory
         io.execute {
             val note = NoteFactory.newNote(title, folder)
             var ok = r.save(note) is PnoteResult.Ok

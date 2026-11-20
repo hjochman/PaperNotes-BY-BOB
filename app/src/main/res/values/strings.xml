@@ -83,6 +83,8 @@
     <string name="page_prev">Vorherige Seite</string>
     <string name="page_next">Nächste Seite</string>
     <string name="zoom_percent">%d %%</string>
+    <string name="zoom_in">Vergrößern</string>
+    <string name="zoom_out">Verkleinern</string>
     <string name="undo">Rückgängig</string>
     <string name="redo">Wiederholen</string>
     <string name="page_add">Seite hinzufügen</string>

@@ -152,7 +152,20 @@ class EditorActivity : Activity() {
         applyEraser()
         canvas.setTool(tools.tool)
         refreshToolUi()
+        // Bis die Notiz geladen und angezeigt ist, nicht schreiben: showPage setzt die Striche der Stiftschicht neu
+        // (setTrackList/clear) und würde einen schon begonnenen Strich löschen.
+        loadLockHeld = true
+        overlayOpened()
         loadNote(executor, noteId)
+    }
+
+    private var loadLockHeld = false
+
+    /** Gibt die Schreibsperre vom Laden frei (einmalig, an jedem Ausgang von [loadNote]). */
+    private fun releaseLoadLock() {
+        if (!loadLockHeld) return
+        loadLockHeld = false
+        overlayClosed()
     }
 
     /**
@@ -193,15 +206,11 @@ class EditorActivity : Activity() {
         textMicBadge = findViewById(R.id.textMicBadge)
         textPage = findViewById(R.id.textPage)
         textZoom = findViewById(R.id.textZoom)
-        canvas.onZoomChanged = { percent ->
-            // Nur bei Änderung (auf 5 % gerundet) neu zeichnen, damit E-Ink ruhig bleibt.
-            if (ZoomLogic.isVisible(percent)) {
-                textZoom.text = getString(R.string.zoom_percent, percent)
-                textZoom.visibility = View.VISIBLE
-            } else {
-                textZoom.visibility = View.GONE
-            }
-        }
+        textZoom.text = getString(R.string.zoom_percent, 100)
+        // Nur bei Änderung der Stufe neu zeichnen, damit E-Ink ruhig bleibt.
+        canvas.onZoomChanged = { percent -> textZoom.text = getString(R.string.zoom_percent, percent) }
+        findViewById<View>(R.id.buttonZoomOut).setOnClickListener { canvas.zoomOut() }
+        findViewById<View>(R.id.buttonZoomIn).setOnClickListener { canvas.zoomIn() }
         buttonPrev = findViewById(R.id.buttonPrevPage)
         buttonNext = findViewById(R.id.buttonNextPage)
         buttonUndo = findViewById(R.id.buttonUndo)
@@ -777,6 +786,7 @@ class EditorActivity : Activity() {
 
     private fun loadNote(executor: ExecutorService, noteId: String) {
         if (!NotesLocation.hasAccess(this)) {
+            releaseLoadLock()
             toast(R.string.error_no_storage)
             finish()
             return
@@ -797,6 +807,7 @@ class EditorActivity : Activity() {
                 } else {
                     startSession(NoteRepository(root), note)
                 }
+                releaseLoadLock()
             }
         }
     }
@@ -1128,7 +1139,7 @@ class EditorActivity : Activity() {
 
         // Erst nach dem Laden der Notiz bedienbar. Werkzeuge und Menü sind immer aktiv; Platzhalter bleiben deaktiviert.
         private val CONTROL_IDS = intArrayOf(
-            R.id.buttonPrevPage, R.id.buttonNextPage, R.id.buttonUndo, R.id.buttonRedo, R.id.buttonAddPage,
+            R.id.buttonZoomOut, R.id.buttonZoomIn, R.id.buttonPrevPage, R.id.buttonNextPage, R.id.buttonUndo, R.id.buttonRedo, R.id.buttonAddPage,
             R.id.buttonToolPageAdd, R.id.buttonDeletePage, R.id.buttonTemplate, R.id.buttonSidebar,
         )
 

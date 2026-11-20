@@ -23,6 +23,9 @@ internal interface TileActions {
     fun openNote(id: String)
     fun openFolder(path: String)
     fun newQuickNote()
+
+    /** Legt eine neue Notiz im Ordner [folder] an (Ordnerkachel-"+"). */
+    fun newNoteIn(folder: FolderItem)
     fun noteMenu(anchor: View, note: NoteSummary)
     fun folderMenu(anchor: View, folder: FolderItem)
 
@@ -184,7 +187,11 @@ internal class HomeTiles(
                 it.topMargin = m.folderTabHeight + m.folderInnerPadding
             },
         )
-        if (actions.selecting) box.addView(checkBox(key), checkBoxParams())
+        if (actions.selecting) {
+            box.addView(checkBox(key), checkBoxParams())
+        } else {
+            box.addView(newNoteButton(folder), FrameLayout.LayoutParams(dp(40f), dp(40f), Gravity.TOP or Gravity.END))
+        }
         tile.addView(box, LinearLayout.LayoutParams(m.folderWidth, m.folderBoxHeight))
         val label = res.getQuantityString(R.plurals.folder_label, folder.noteCount, folder.name, folder.noteCount)
         val date = if (folder.modified > 0) dates.format(folder.modified) else ""
@@ -338,6 +345,16 @@ internal class HomeTiles(
         ellipsize = TextUtils.TruncateAt.END
         if (maxLines == 1) isSingleLine = true
     }
+
+    /** Kleines "+" oben rechts im Ordner: Symbol im schmalen Streifen über den Mini-Vorschauen, Tippfläche 40dp. */
+    private fun newNoteButton(folder: FolderItem) =
+        ImageButton(context, null, 0, R.style.Widget_PaperNotes_IconButton).apply {
+            setImageResource(R.drawable.ic_add)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(10f), dp(2f), dp(10f), dp(18f))
+            contentDescription = context.getString(R.string.new_note)
+            setOnClickListener { actions.newNoteIn(folder) }
+        }
 
     private fun menuButton(description: String, onClick: (View) -> Unit) =
         ImageButton(context, null, 0, R.style.Widget_PaperNotes_IconButton).apply {

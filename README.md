@@ -19,7 +19,7 @@ Handschrift wird über die geräteeigene E-Ink-Stiftschicht mit minimalster Late
 - **Stifttypen:** Vier Stiftmodi (Füllfederhalter, Kugelschreiber, Bleistift, Marker mit echter Transparenz) in den Farben Schwarz, Blau und Rot mit stufenloser Größenwahl.
 - **Radierer:** Präzises Teilstück-Radieren und schnelles Vollstrich-Löschen („Striche löschen“).
 - **Lasso-Werkzeug:** Auswählen, Verschieben, Ausschneiden, Kopieren, Einfügen und Löschen von Strichen mit Filteroptionen (Stift, Text, Bild).
-- **Zwei-Finger-Zoom & Pan:** Stufenloser Zoom von 100 % bis 500 % und Verschieben der Schreibfläche.
+- **Zoom & Verschieben:** Zoom von 100 % bis 500 % über `-`/`+` in der Kopfzeile; im gezoomten Zustand verschiebt ein Finger die Seite (nie, solange der Stift aufliegt oder schwebt). Das Schreiben bleibt immer frei.
 - **Seitenleiste & Lesezeichen:** Schnellnavigation mit Miniaturvorschauen aller Seiten, Lesezeichen-Markierungen (`★`) und direktem Seitensprung („Gehe zu“).
 - **Verlauf:** Unbegrenzter Undo/Redo-Verlauf pro Seite.
 
