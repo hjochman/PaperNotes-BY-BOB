@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Selbst gezeichnetes Symbol: Stift mit Doppeltipp-Wellen, 24dp, 2dp-Strich (Farbe zur Laufzeit aus @color/icon_tint). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M17,8 L21,12 L12,21 L7,22 L8,17 Z M3,8 A5,5 0 0 1 8,3 M2,12 A10,10 0 0 1 12,2"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
